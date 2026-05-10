@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>EduPlatform Admin – Social Media Agent</title>
+  <meta name="description" content="Admin panel for Edu Platform AI social media content approval system." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ LOGIN SCREEN ══ -->
+<div id="screen-login" class="screen active">
+  <div class="login-bg">
+    <div class="login-card glass-card">
+      <div class="login-logo">
+        <div class="logo-icon">🎓</div>
+        <h1 class="brand-name">EduPlatform</h1>
+        <p class="brand-sub">The Foundation — Admin Portal</p>
+      </div>
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="input-group">
+          <label>Username</label>
+          <input id="login-username" type="text" placeholder="admin" autocomplete="username" required />
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="login-btn">
+          <span id="login-btn-text">Sign In</span>
+          <span id="login-spinner" class="spinner hidden"></span>
+        </button>
+        <p id="login-error" class="error-msg hidden"></p>
+      </form>
+      <p class="login-hint">City, State | theeduplatform.com</p>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ MAIN APP ══════ -->
+<div id="screen-app" class="screen hidden">
+
+  <!-- Top Nav -->
+  <nav class="topnav">
+    <div class="nav-left">
+      <span class="nav-logo">🎓 EduPlatform</span>
+    </div>
+    <div class="nav-right">
+      <button class="nav-btn" onclick="showTab('tab-today')" id="nav-today">Today</button>
+      <button class="nav-btn" onclick="showTab('tab-history')" id="nav-history">History</button>
+      <button class="nav-btn" onclick="showTab('tab-settings')" id="nav-settings">Settings</button>
+      <button class="nav-btn danger-text" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <!-- ── TAB: TODAY'S POST ───────────────────────────────────── -->
+  <div id="tab-today" class="tab-content active">
+    <div class="page-header" style="align-items: flex-start;">
+      <div style="display: flex; flex-direction: column;">
+        <h2>Today's Post</h2>
+        <div style="font-size: 12px; margin-top: 6px; display: flex; gap: 12px; font-family: monospace;">
+          <span style="color: rgba(255,255,255,0.6);">⚡ Generator: <span id="ui-badge-generator" style="color: #a78bfa; font-weight: 600;">Loading...</span></span>
+          <span style="color: rgba(255,255,255,0.6);">🛡️ Checker: <span id="ui-badge-checker" style="color: #34d399; font-weight: 600;">Loading...</span></span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="lang-switcher">
+          <button id="lang-en" class="lang-btn lang-btn-active" onclick="setLanguage('english')">🇬🇧 English</button>
+          <button id="lang-hi" class="lang-btn" onclick="setLanguage('hindi')">🇮🇳 हिंदी</button>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="generatePost()">
+          <span id="gen-btn-icon">✨</span> Generate New
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="loadPendingPost()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="post-loading" class="center-msg hidden">
+      <div class="big-spinner"></div>
+      <p>Generating content with AI…</p>
+    </div>
+
+    <!-- Empty state -->
+    <div id="post-empty" class="empty-state hidden">
+      <div class="empty-icon">📭</div>
+      <h3>No post waiting for approval</h3>
+      <p>Select language above, then click a post type to generate with AI.</p>
+      <div class="lang-note" id="lang-note-en">🇬🇧 <strong>English</strong> — CBSE / NCERT syllabus, Classes 6–10</div>
+      <div class="lang-note lang-note-hindi hidden" id="lang-note-hi">🇮🇳 <strong>हिंदी</strong> — Bihar Board (BSEB), Class 9 &amp; 10 only</div>
+      <div class="post-type-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <button class="type-btn" onclick="generatePost('trending_awareness', 'Board Exams')">🔥 Exam/Trending</button>
+        <button class="type-btn" onclick="generatePost('quiz_poll', 'Science', 'Class 10')">❓ Quiz / Poll</button>
+        <button class="type-btn" onclick="generatePost('motivational_quote')">🌟 Motivational Quote</button>
+        <button class="type-btn" onclick="generatePost('question_of_day', 'Mathematics', 'Class 9')">📐 Math Q&A</button>
+        <button class="type-btn" onclick="generatePost('question_of_day', 'English Grammar', 'Class 10')">✏️ English Q&A</button>
+        <button class="type-btn lang-always-en" onclick="generatePost('word_of_day')">📖 Word of Day <span class="always-en-tag">Always EN</span></button>
+        <button class="type-btn" onclick="generatePost('interesting_fact', 'Science')">🔬 Science Fact</button>
+        <button class="type-btn" onclick="generatePost('interesting_fact', 'History/GK')">🌍 History Fact</button>
+      </div>
+    </div>
+
+    <!-- Post card -->
+    <div id="post-card" class="hidden">
+      <div class="content-grid">
+        <!-- Left: Image -->
+        <div class="post-image-section">
+          <div class="post-image-wrapper">
+            <img id="post-image" src="" alt="Generated post image" onerror="this.parentElement.innerHTML='<div class=\'no-image\'>🖼️<br/>Image generating…</div>'" />
+          </div>
+          <div class="post-meta">
+            <span class="badge" id="post-type-badge"></span>
+            <span class="badge badge-outline" id="post-subject-badge"></span>
+            <span class="badge badge-outline" id="post-class-badge"></span>
+          </div>
+          <div class="fact-check-row">
+            <span id="fact-check-indicator"></span>
+          </div>
+        </div>
+
+        <!-- Right: Content -->
+        <div class="post-content-section">
+          <div class="section-block">
+            <div class="section-header">
+              <span>Caption</span>
+              <button class="btn-icon" onclick="toggleEditCaption()" title="Edit caption">✏️</button>
+            </div>
+            <p id="caption-display" class="caption-text"></p>
+            <textarea id="caption-edit" class="edit-textarea hidden" rows="8"></textarea>
+          </div>
+
+          <div class="section-block">
+            <div class="section-header">
+              <span>Hashtags</span>
+              <button class="btn-icon" onclick="toggleEditHashtags()" title="Edit hashtags">✏️</button>
+            </div>
+            <p id="hashtags-display" class="hashtag-text"></p>
+            <textarea id="hashtags-edit" class="edit-textarea hidden" rows="3"></textarea>
+          </div>
+
+          <div id="save-edits-bar" class="hidden">
+            <button class="btn btn-outline btn-sm" onclick="cancelEdits()">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="saveEdits()">Save Changes</button>
+          </div>
+
+          <div class="section-block suggestions-block">
+            <div class="section-header"><span>💡 AI Suggestions</span></div>
+            <p id="post-suggestions" class="suggestion-text"></p>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="action-row">
+            <button class="btn btn-success btn-action" id="approve-btn" onclick="approvePost()">
+              ✅ Approve &amp; Publish
+            </button>
+            <button class="btn btn-warning btn-action" onclick="regeneratePost()">
+              🔄 Regenerate
+            </button>
+            <button class="btn btn-danger btn-action" onclick="rejectPost()">
+              ❌ Reject
+            </button>
+          </div>
+
+          <div id="status-msg" class="status-message hidden"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB: HISTORY ─────────────────────────────────────────── -->
+  <div id="tab-history" class="tab-content hidden">
+    <div class="page-header">
+      <h2>Last 7 Days</h2>
+      <button class="btn btn-outline btn-sm" onclick="loadHistory()">↻ Refresh</button>
+    </div>
+    <div id="history-loading" class="center-msg hidden">
+      <div class="big-spinner"></div>
+    </div>
+    <div id="history-list" class="history-grid"></div>
+    <div id="history-empty" class="empty-state hidden">
+      <div class="empty-icon">📂</div>
+      <h3>No posts in the last 7 days</h3>
+    </div>
+  </div>
+
+  <!-- ── TAB: SETTINGS ────────────────────────────────────────── -->
+  <div id="tab-settings" class="tab-content hidden">
+    <div class="page-header"><h2>Settings &amp; Status</h2></div>
+    <div class="settings-grid">
+      <div class="glass-card settings-card">
+        <h3>🔌 API Status</h3>
+        <div id="api-status-list" class="status-list">
+          <div class="center-msg"><div class="big-spinner"></div></div>
+        </div>
+        <button class="btn btn-outline btn-sm mt-2" onclick="loadStatus()">↻ Refresh</button>
+      </div>
+      <div class="glass-card settings-card">
+        <h3>🏫 Brand Info</h3>
+        <div class="info-list">
+          <div class="info-row"><span>Name</span><span>Edu Platform</span></div>
+          <div class="info-row"><span>Location</span><span>City, State</span></div>
+          <div class="info-row"><span>Phone</span><span>1234567890 / 9643557068</span></div>
+          <div class="info-row"><span>Website</span><a href="https://theeduplatform.com" target="_blank">theeduplatform.com</a></div>
+          <div class="info-row"><span>Courses</span><span>Classes 6–12 | JEE | NEET | BPSC</span></div>
+        </div>
+      </div>
+      <div class="glass-card settings-card">
+        <h3>📅 Weekly Schedule</h3>
+        <div class="info-list">
+          <div class="info-row"><span>Monday</span><span>Word of the Day</span></div>
+          <div class="info-row"><span>Tuesday</span><span>Maths Q&amp;A</span></div>
+          <div class="info-row"><span>Wednesday</span><span>Science Fact</span></div>
+          <div class="info-row"><span>Thursday</span><span>History / GK</span></div>
+          <div class="info-row"><span>Friday</span><span>English Grammar</span></div>
+          <div class="info-row"><span>Saturday</span><span>Quiz / MCQ</span></div>
+          <div class="info-row"><span>Sunday</span><span>Admission / Motivation</span></div>
+        </div>
+      </div>
+      <div class="glass-card settings-card">
+        <h3>⚙️ Server Info</h3>
+        <div class="info-list">
+          <div class="info-row"><span>Backend URL</span><span id="server-url-display"></span></div>
+          <div class="info-row"><span>Auto-post time</span><span>07:00 IST daily</span></div>
+          <div class="info-row"><span>Cleanup</span><span>02:00 IST daily (7d)</span></div>
+        </div>
+        <div class="mt-2">
+          <label class="input-label">Backend URL</label>
+          <div class="input-row">
+            <input id="server-url-input" type="text" class="input-sm" placeholder="http://localhost:8000" />
+            <button class="btn btn-primary btn-sm" onclick="saveServerUrl()">Save</button>
+          </div>
+        </div>
+      </div>
+      <div class="glass-card settings-card">
+        <h3>🔑 LLM API Configuration</h3>
+        <p style="font-size: 13px; margin-bottom: 15px; color: rgba(255,255,255,0.7); line-height: 1.5;">
+          Paste a new API key if the current one stops working. Update the model name if the provider retires a model.
+        </p>
+
+        <!-- OpenRouter -->
+        <div style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:14px; margin-bottom:14px;">
+          <div style="font-size:12px; font-weight:600; color:#a78bfa; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">OpenRouter — Generation</div>
+          <div class="mt-2">
+            <label class="input-label">API Key</label>
+            <div class="input-row" style="display:flex; gap:8px;">
+              <input id="openrouter-key-input" type="password" class="input-sm" placeholder="sk-or-v1-..." style="flex:1;" />
+              <button class="btn btn-primary btn-sm" id="btn-save-openrouter" onclick="saveApiKey('openrouter')">Save</button>
+            </div>
+          </div>
+          <div class="mt-2" style="margin-top:8px;">
+            <label class="input-label">Active Model</label>
+            <div class="input-row" style="display:flex; gap:8px;">
+              <input id="openrouter-model-input" type="text" class="input-sm" placeholder="e.g. meta-llama/llama-3.3-70b-instruct:free" style="flex:1;" />
+              <button class="btn btn-outline btn-sm" id="btn-save-openrouter-model" onclick="saveModelName('openrouter')">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Groq -->
+        <div style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:14px; margin-bottom:14px;">
+          <div style="font-size:12px; font-weight:600; color:#34d399; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Groq — Fact-Checking</div>
+          <div class="mt-2">
+            <label class="input-label">API Key</label>
+            <div class="input-row" style="display:flex; gap:8px;">
+              <input id="groq-key-input" type="password" class="input-sm" placeholder="gsk_..." style="flex:1;" />
+              <button class="btn btn-primary btn-sm" id="btn-save-groq" onclick="saveApiKey('groq')">Save</button>
+            </div>
+          </div>
+          <div class="mt-2" style="margin-top:8px;">
+            <label class="input-label">Active Model</label>
+            <div class="input-row" style="display:flex; gap:8px;">
+              <input id="groq-model-input" type="text" class="input-sm" placeholder="e.g. llama-3.3-70b-versatile" style="flex:1;" />
+              <button class="btn btn-outline btn-sm" id="btn-save-groq-model" onclick="saveModelName('groq')">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- NVIDIA -->
+        <div style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:14px; margin-bottom:14px;">
+          <div style="font-size:12px; font-weight:600; color:#76d9f5; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">NVIDIA — Alternative Generation</div>
+          <div class="mt-2">
+            <label class="input-label">API Key</label>
+            <div class="input-row" style="display:flex; gap:8px;">
+              <input id="nvidia-key-input" type="password" class="input-sm" placeholder="nvapi-..." style="flex:1;" />
+              <button class="btn btn-primary btn-sm" id="btn-save-nvidia" onclick="saveApiKey('nvidia')">Save</button>
+            </div>
+          </div>
+          <div class="mt-2" style="margin-top:8px;">
+            <label class="input-label">Active Model</label>
+            <div class="input-row" style="display:flex; gap:8px;">
+              <input id="nvidia-model-input" type="text" class="input-sm" placeholder="e.g. meta/llama-3.3-70b-instruct" style="flex:1;" />
+              <button class="btn btn-outline btn-sm" id="btn-save-nvidia-model" onclick="saveModelName('nvidia')">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hugging Face -->
+        <div>
+          <div style="font-size:12px; font-weight:600; color:#fbbf24; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Hugging Face — Alternative Generation</div>
+          <div class="mt-2">
+            <label class="input-label">API Key</label>
+            <div class="input-row" style="display:flex; gap:8px;">
+              <input id="huggingface-key-input" type="password" class="input-sm" placeholder="hf_..." style="flex:1;" />
+              <button class="btn btn-primary btn-sm" id="btn-save-huggingface" onclick="saveApiKey('huggingface')">Save</button>
+            </div>
+          </div>
+          <div class="mt-2" style="margin-top:8px;">
+            <label class="input-label">Active Model</label>
+            <div class="input-row" style="display:flex; gap:8px;">
+              <input id="huggingface-model-input" type="text" class="input-sm" placeholder="e.g. meta-llama/Llama-3.3-70B-Instruct" style="flex:1;" />
+              <button class="btn btn-outline btn-sm" id="btn-save-huggingface-model" onclick="saveModelName('huggingface')">Save</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      
+      <div class="glass-card settings-card" style="border: 1px solid rgba(239, 68, 68, 0.4);">
+        <h3 style="color: #ef4444;">⚠️ Database Actions</h3>
+        <p style="font-size: 13px; margin-bottom: 15px; color: rgba(255,255,255,0.7); line-height: 1.5;">
+          Warning: This action is permanent. All posts and generated history will be deleted.
+        </p>
+        <button class="btn btn-danger btn-full" onclick="clearDatabase()">🗑️ Clear Entire Database</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /screen-app -->
+
+<script src="app.js"></script>
+</body>
+</html>

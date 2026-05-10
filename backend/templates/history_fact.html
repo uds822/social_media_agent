@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&family=Noto+Sans+Devanagari:wght@400;600;700;800;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{width:1080px;height:1080px;font-family:'Poppins','Noto Sans Devanagari',Arial,sans-serif;overflow:hidden;background:#fff;}
+  .card{width:1080px;height:1080px;position:relative;background:#fafbff;}
+
+  /* Watermark — historical monuments (faint) */
+  .watermarks{position:absolute;inset:0;opacity:0.05;pointer-events:none;}
+  .wm{position:absolute;font-size:120px;}
+  .wm1{top:300px;left:-20px;} .wm2{bottom:200px;right:-10px;transform:rotate(10deg);}
+
+  /* Dot grid top-right */
+  .dot-grid{
+    position:absolute;top:20px;right:20px;width:110px;height:110px;
+    background-image:radial-gradient(circle,#1a237e 1.5px,transparent 1.5px);
+    background-size:14px 14px;opacity:0.4;
+  }
+
+  /* ── HEADER ── */
+  .header{
+    position:absolute;top:0;left:0;right:0;height:200px;
+    background:#fff;
+    display:flex;align-items:center;padding:0 40px;gap:28px;
+    border-bottom:4px solid #e53935;
+    overflow:hidden;
+  }
+  .header-line{position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#1a237e,#e53935,#1a237e);}
+  .logo-img{width:140px;height:140px;object-fit:contain;}
+  .brand-text{}
+  .brand-name{font-size:62px;font-weight:900;letter-spacing:3px;line-height:1;color:#1a237e;}
+  .brand-line{display:flex;align-items:center;gap:14px;margin-top:4px;}
+  .brand-line-bar{height:2px;width:50px;background:#e53935;}
+  .brand-sub{font-size:20px;font-weight:600;letter-spacing:6px;color:#e53935;}
+
+  /* ── BADGE ── */
+  .badge-row{
+    position:absolute;top:218px;left:50px;right:50px;
+    display:flex;align-items:center;gap:20px;
+  }
+  .badge-line{flex:1;height:2px;background:linear-gradient(90deg,transparent,#e53935);}
+  .badge-line-r{flex:1;height:2px;background:linear-gradient(90deg,#e53935,transparent);}
+  .badge{
+    background:linear-gradient(135deg,#1a237e,#283593);
+    color:#fff;font-size:28px;font-weight:800;letter-spacing:2px;
+    padding:16px 40px;border-radius:14px;
+    display:flex;align-items:center;gap:16px;white-space:nowrap;
+    box-shadow:0 6px 20px rgba(26,35,126,0.35);
+  }
+  .badge-icon{font-size:34px;}
+
+  /* ── CONTENT BOX ── */
+  .content-box{
+    position:absolute;top:310px;left:50px;right:50px;bottom:175px;
+    background:#fff;border-radius:24px;
+    border:2.5px solid #1a237e;
+    box-shadow:0 8px 40px rgba(26,35,126,0.1),4px 4px 0 #e53935;
+    padding:44px 52px;
+    display:flex;flex-direction:column;gap:20px;overflow:hidden;
+  }
+  .content-box::before{
+    content:'';position:absolute;top:0;left:0;width:8px;height:100%;
+    background:linear-gradient(to bottom,#1a237e,#e53935);border-radius:24px 0 0 24px;
+  }
+
+  .fact-title{font-size:40px;font-weight:800;color:#1a237e;line-height:1.2;padding-left:16px;}
+  .fact-divider{width:100%;height:3px;background:linear-gradient(90deg,#e53935,#1a237e,transparent);border-radius:2px;}
+  .fact-body{font-size:31px;line-height:1.65;color:#1a1a2e;padding-left:16px;font-weight:400;flex:1;}
+  .fact-body .hl{color:#e53935;font-weight:700;}
+  .fact-source{font-size:18px;color:#888;font-style:italic;padding-left:16px;border-top:1px solid #eee;padding-top:12px;}
+
+  /* ── FOOTER ── */
+  .footer{
+    position:absolute;bottom:0;left:0;right:0;height:155px;
+    background:linear-gradient(135deg,#1a237e,#283593);
+    display:flex;align-items:center;justify-content:center;gap:80px;
+    padding:0 60px;overflow:hidden;
+  }
+  .footer::before{
+    content:'';position:absolute;top:-2px;left:0;right:0;height:35px;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1080 35'%3E%3Cpath d='M0,35 C200,0 400,35 600,15 C800,0 1000,35 1080,20 L1080,0 L0,0 Z' fill='%23fafbff'/%3E%3C/svg%3E") center/cover no-repeat;
+  }
+  .footer::after{content:'';position:absolute;bottom:0;left:0;right:0;height:6px;background:linear-gradient(90deg,#e53935,#ef5350,#e53935);}
+  .footer-contact{display:flex;align-items:center;gap:18px;color:#fff;}
+  .footer-icon-wrap{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:32px;}
+  .footer-info{line-height:1.2;}
+  .footer-label{font-size:14px;opacity:0.7;letter-spacing:1px;}
+  .footer-number{font-size:28px;font-weight:700;}
+  .footer-divider{width:2px;height:70px;background:rgba(255,255,255,0.25);}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="watermarks"><span class="wm wm1">🏛️</span><span class="wm wm2">🗺️</span></div>
+  <div class="dot-grid"></div>
+
+  <div class="header">
+    <img class="logo-img" src="{{LOGO_PATH}}" alt="EduPlatform Logo" onerror="this.style.display='none'"/>
+    <div class="brand-text">
+      <div class="brand-name">EduPlatform</div>
+      <div class="brand-line">
+        <div class="brand-line-bar"></div>
+        <div class="brand-sub">THE FOUNDATION</div>
+        <div class="brand-line-bar"></div>
+      </div>
+    </div>
+    <div class="header-line"></div>
+  </div>
+
+  <div class="badge-row">
+    <div class="badge-line"></div>
+    <div class="badge"><span class="badge-icon">🏛️</span> HISTORICAL FACT</div>
+    <div class="badge-line-r"></div>
+  </div>
+
+  <div class="content-box">
+    <div class="fact-title">{{FACT_TITLE}}</div>
+    <div class="fact-divider"></div>
+    <div class="fact-body">{{FACT_BODY}}</div>
+    <div class="fact-source">📖 Category: History / GK</div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-contact">
+      <div class="footer-icon-wrap">📞</div>
+      <div class="footer-info">
+        <div class="footer-label">Phone</div>
+        <div class="footer-number">1234567890</div>
+      </div>
+    </div>
+    <div class="footer-divider"></div>
+    <div class="footer-contact">
+      <div class="footer-icon-wrap">💬</div>
+      <div class="footer-info">
+        <div class="footer-label">WhatsApp</div>
+        <div class="footer-number">9643557068</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&family=Noto+Sans+Devanagari:wght@400;600;700;800;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{width:1080px;height:1080px;font-family:'Poppins','Noto Sans Devanagari',Arial,sans-serif;overflow:hidden;background:#fff;}
+  .card{width:1080px;height:1080px;position:relative;background:linear-gradient(135deg,#e8f5e9 0%,#f1f8ff 100%);}
+
+  /* Math watermarks */
+  .wm{position:absolute;font-size:28px;color:#1565c0;opacity:0.06;font-weight:900;font-family:monospace;}
+  .wm1{top:240px;left:15px;} .wm2{top:340px;left:20px;} .wm3{top:440px;left:10px;}
+  .wm4{top:260px;right:15px;} .wm5{top:380px;right:20px;} .wm6{top:500px;right:10px;}
+
+  /* ── HEADER ── */
+  .header{position:absolute;top:0;left:0;right:0;height:200px;background:linear-gradient(135deg,#1b5e20,#2e7d32,#388e3c);display:flex;align-items:center;padding:0 40px;gap:28px;overflow:hidden;}
+  .header::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:40px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1080 40'%3E%3Cpath d='M0,0 C200,40 400,0 600,20 C800,40 1000,0 1080,15 L1080,40 L0,40 Z' fill='%23e8f5e9'/%3E%3C/svg%3E") center/cover no-repeat;}
+  .logo-img{width:140px;height:140px;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.3));}
+  .brand-name{font-size:62px;font-weight:900;letter-spacing:3px;color:#fff;}
+  .brand-line{display:flex;align-items:center;gap:14px;margin-top:4px;}
+  .brand-line-bar{height:2px;width:50px;background:rgba(255,255,255,0.6);}
+  .brand-sub{font-size:20px;font-weight:600;letter-spacing:6px;color:rgba(255,255,255,0.9);}
+
+  /* ── BADGE ── */
+  .badge-row{position:absolute;top:212px;left:50%;transform:translateX(-50%);display:flex;align-items:center;filter:drop-shadow(0 6px 16px rgba(0,0,0,0.2));}
+  .badge-icon{font-size:60px;margin-right:-10px;z-index:2;}
+  .badge{background:linear-gradient(135deg,#1565c0,#1976d2);color:#fff;font-size:28px;font-weight:800;letter-spacing:2px;padding:14px 36px 14px 24px;border-radius:12px;}
+
+  /* ── CONTENT BOX ── */
+  .content-box{position:absolute;top:310px;left:50px;right:50px;bottom:175px;background:#fff;border-radius:24px;border:3px solid #2e7d32;box-shadow:0 8px 40px rgba(46,125,50,0.15);padding:36px 50px;display:flex;flex-direction:column;gap:16px;overflow:hidden;}
+  .content-box::before{content:'';position:absolute;top:0;left:0;width:8px;height:100%;background:linear-gradient(to bottom,#2e7d32,#1565c0);border-radius:24px 0 0 24px;}
+
+  /* Class + subject row */
+  .meta-row{display:flex;gap:12px;padding-left:16px;}
+  .meta-pill{background:#e8f5e9;color:#1b5e20;padding:6px 20px;border-radius:100px;font-size:18px;font-weight:600;border:1.5px solid #2e7d32;}
+  .meta-pill.blue{background:#e3f2fd;color:#0d47a1;border-color:#1565c0;}
+
+  /* Question */
+  .q-label{font-size:16px;font-weight:700;color:#2e7d32;letter-spacing:2px;padding-left:16px;}
+  .question{font-size:34px;font-weight:700;color:#1a1a2e;line-height:1.45;padding-left:16px;flex:1;}
+  .question .hl{color:#1565c0;}
+
+  /* Divider */
+  .divider{width:100%;height:2px;background:linear-gradient(90deg,#2e7d32,#1565c0,transparent);}
+
+  /* Answer */
+  .a-label{font-size:16px;font-weight:700;color:#1565c0;letter-spacing:2px;padding-left:16px;}
+  .answer-box{background:linear-gradient(135deg,#e3f2fd,#e8f5e9);border-radius:14px;padding:18px 24px;border-left:5px solid #1565c0;}
+  .answer{font-size:28px;color:#1a237e;font-weight:600;line-height:1.5;}
+  .answer-note{font-size:20px;color:#555;margin-top:8px;font-style:italic;}
+
+  /* ── FOOTER ── */
+  .footer{position:absolute;bottom:0;left:0;right:0;height:155px;background:linear-gradient(135deg,#1b5e20,#2e7d32);display:flex;align-items:center;justify-content:center;gap:80px;overflow:hidden;}
+  .footer::before{content:'';position:absolute;top:-2px;left:0;right:0;height:35px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1080 35'%3E%3Cpath d='M0,35 C200,0 400,35 600,15 C800,0 1000,35 1080,20 L1080,0 L0,0 Z' fill='%23e8f5e9'/%3E%3C/svg%3E") center/cover no-repeat;}
+  .footer-contact{display:flex;align-items:center;gap:18px;color:#fff;}
+  .footer-icon{font-size:40px;background:rgba(255,255,255,0.2);border-radius:50%;padding:8px;}
+  .footer-info .footer-label{font-size:14px;opacity:0.7;letter-spacing:1px;}
+  .footer-info .footer-number{font-size:28px;font-weight:700;}
+  .footer-divider{width:2px;height:70px;background:rgba(255,255,255,0.3);}
+</style>
+</head>
+<body>
+<div class="card">
+  <!-- Math watermarks -->
+  <div class="wm wm1">∑ ∫ π</div><div class="wm wm2">x² + y² = r²</div>
+  <div class="wm wm3">∞ √ ÷</div><div class="wm wm4">sin cos tan</div>
+  <div class="wm wm5">log n!</div><div class="wm wm6">a² + b² = c²</div>
+
+  <div class="header">
+    <img class="logo-img" src="{{LOGO_PATH}}" alt="EduPlatform Logo" onerror="this.style.display='none'"/>
+    <div><div class="brand-name">EduPlatform</div><div class="brand-line"><div class="brand-line-bar"></div><div class="brand-sub">THE FOUNDATION</div><div class="brand-line-bar"></div></div></div>
+  </div>
+
+  <div class="badge-row">
+    <span class="badge-icon">🧮</span>
+    <div class="badge">QUESTION OF THE DAY</div>
+  </div>
+
+  <div class="content-box">
+    <div class="meta-row">
+      <div class="meta-pill">{{CLASS_LEVEL}}</div>
+      <div class="meta-pill blue">{{SUBJECT}}</div>
+    </div>
+    <div class="q-label">❓ QUESTION</div>
+    <div class="question">{{QUESTION}}</div>
+    <div class="divider"></div>
+    <div class="a-label">✅ ANSWER</div>
+    <div class="answer-box">
+      <div class="answer">{{ANSWER}}</div>
+      <div class="answer-note">{{EXPLANATION}}</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-contact"><span class="footer-icon">📞</span><div class="footer-info"><div class="footer-label">Phone</div><div class="footer-number">1234567890</div></div></div>
+    <div class="footer-divider"></div>
+    <div class="footer-contact"><span class="footer-icon">💬</span><div class="footer-info"><div class="footer-label">WhatsApp</div><div class="footer-number">9643557068</div></div></div>
+  </div>
+</div>
+</body>
+</html>
