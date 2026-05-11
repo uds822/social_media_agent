@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>EduPlatform Admin – Social Media Agent</title>
   <meta name="description" content="Admin panel for Edu Platform AI social media content approval system." />
+  
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1A237E" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="EduAdmin" />
+  
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -29,6 +37,9 @@
         <div class="input-group">
           <label>Password</label>
           <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" required />
+          <button type="button" id="show-pass-btn" onclick="togglePassword()" style="margin-top:8px;width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#8B92B0;font-size:13px;font-weight:600;padding:10px;cursor:pointer;letter-spacing:0.5px;">
+            👁 SHOW PASSWORD
+          </button>
         </div>
         <button type="submit" class="btn btn-primary btn-full" id="login-btn">
           <span id="login-btn-text">Sign In</span>
@@ -332,5 +343,14 @@
 </div><!-- /screen-app -->
 
 <script src="app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('ServiceWorker registered'))
+        .catch(err => console.log('ServiceWorker error:', err));
+    });
+  }
+</script>
 </body>
 </html>

@@ -29,7 +29,9 @@ WEEKLY_SCHEDULE = {
     6: ("admission_post",    "Promotional",    None),        # Sunday
 }
 
-CLASS_LEVELS = ["Class 6", "Class 7", "Class 8", "Class 9", "Class 10", "Class 11", "Class 12", "JEE", "NEET", "BPSC"]
+CLASS_LEVELS_ENGLISH = ["Class 6", "Class 7", "Class 8", "Class 9", "Class 10"]  # CBSE
+CLASS_LEVELS_HINDI   = ["Class 9", "Class 10"]                                     # Bihar Board (BSEB)
+CLASS_LEVELS = CLASS_LEVELS_ENGLISH  # kept for any direct references
 
 # Brand constants
 BRAND = {
@@ -49,28 +51,28 @@ def _openrouter_client() -> OpenAI:
     return OpenAI(
         api_key=settings.openrouter_api_key,
         base_url=settings.openrouter_base_url,
-        timeout=15.0,
+        timeout=10.0,
     )
 
 def _groq_client() -> OpenAI:
     return OpenAI(
         api_key=settings.groq_api_key,
         base_url=settings.groq_base_url,
-        timeout=15.0,
+        timeout=10.0,
     )
 
 def _nvidia_client() -> OpenAI:
     return OpenAI(
         api_key=settings.nvidia_api_key,
         base_url=settings.nvidia_base_url,
-        timeout=15.0,
+        timeout=10.0,
     )
 
 def _huggingface_client() -> OpenAI:
     return OpenAI(
         api_key=settings.huggingface_api_key,
         base_url=settings.huggingface_base_url,
-        timeout=15.0,
+        timeout=10.0,
     )
 
 
@@ -141,9 +143,12 @@ SAFETY_RULES = (
 )
 
 HINDI_RULES = (
-    "IMPORTANT LANGUAGE RULE: Write ALL content (question, answer, explanation, caption, fact_title, fact_text, greeting_message) "
+    "IMPORTANT LANGUAGE RULE: Write ALL text content (question, answer, explanation, caption, fact_title, fact_text, greeting_message, bullet_points, headline, quote) "
     "ENTIRELY in Hindi using Devanagari script. This is for Bihar Board (BSEB) students. "
-    "Use simple, clear Hindi. Only brand names, phone numbers, and website URLs should remain in English/Latin script."
+    "Use simple, clear Hindi. "
+    "NUMBERS & DIGITS RULE: Always use English/Arabic numerals (0, 1, 2, 3, 4, 5, 6, 7, 8, 9) for ALL numbers, dates, percentages, roll numbers, years, phone numbers, and class numbers. "
+    "Do NOT use Devanagari numerals (१, २, ३ etc.). "
+    "Only brand names, phone numbers, website URLs, and class/grade numbers should remain in English/Latin script."
 )
 
 
@@ -466,7 +471,10 @@ def generate_daily_post(
         subject   = subject or scheduled_subject
 
     if class_level is None:
-        class_level = random.choice(CLASS_LEVELS[:6])  # Classes 6-12
+        if language == "hindi":
+            class_level = random.choice(CLASS_LEVELS_HINDI)   # Class 9 or 10 — Bihar Board
+        else:
+            class_level = random.choice(CLASS_LEVELS_ENGLISH) # Class 6-10 — CBSE
 
     logger.info("Generating post: type=%s subject=%s class=%s language=%s", post_type, subject, class_level, language)
 
@@ -487,8 +495,7 @@ def generate_daily_post(
     else:
         data = generate_question_of_day(subject or "Science", class_level, language)
 
-    # Fact-check
-    data["fact_check_status"] = fact_check(data)
+    # Fact-check is now done in parallel with image generation by the caller
     data["status"] = "awaiting_approval"
 
     return data

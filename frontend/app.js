@@ -4,7 +4,8 @@
  */
 
 // ── Configuration ────────────────────────────────────────────────────────────
-const DEFAULT_API = 'http://localhost:8000';
+// Auto-detect backend from same host as frontend (works on phone, laptop, any device)
+const DEFAULT_API = `${window.location.protocol}//${window.location.hostname}:8000`;
 
 function getApiBase() {
   return localStorage.getItem('eduplatform_api_url') || DEFAULT_API;
@@ -67,6 +68,18 @@ async function handleLogin(e) {
     btnText.textContent = 'Sign In';
     spinner.classList.add('hidden');
     btn.disabled = false;
+  }
+}
+
+function togglePassword() {
+  const input = document.getElementById('login-password');
+  const btn   = document.getElementById('show-pass-btn');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈 HIDE PASSWORD';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁 SHOW PASSWORD';
   }
 }
 
@@ -255,14 +268,15 @@ async function generatePost(postType, subject, classLevel) {
       class_level: classLevel || null,
       language:    langToSend,
     });
-    // Poll every 3s up to 10 times (30s total)
+    // Poll every 3s up to 20 times (~65s total)
     let attempts = 0;
     const poll = async () => {
       attempts++;
+      if (attempts === 10) {
+        showStatusMsg('Still generating… AI is thinking hard, please wait ⏳', 'info');
+      }
       try {
         const data = await api('/api/posts/pending');
-        // Because the backend instantly clears all pending posts when we hit generate,
-        // ANY post we get back that is different from previousPostId IS the new one!
         if (data && data.post && data.post.id !== previousPostId) {
           currentPost = data.post;
           renderPost(data.post);
@@ -272,15 +286,15 @@ async function generatePost(postType, subject, classLevel) {
           return;
         }
       } catch (_) {}
-      if (attempts < 10) {
+      if (attempts < 20) {
         setTimeout(poll, 3000);
       } else {
         setPostState('empty');
-        showStatusMsg('Generation timed out. Try again.', 'error');
+        showStatusMsg('Generation timed out. Check History tab or tap Refresh.', 'error');
         icon.textContent = '✨';
       }
     };
-    setTimeout(poll, 5000); // first check after 5s
+    setTimeout(poll, 2000); // first check after 2s
   } catch (err) {
     setPostState('empty');
     showStatusMsg('Generation failed: ' + err.message, 'error');

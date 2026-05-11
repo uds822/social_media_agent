@@ -35,10 +35,14 @@ def _job_generate_daily_post():
     """Generate and store today's post in the DB. Auto-handles festivals."""
     logger.info("⏰ Scheduler: generating daily post …")
     try:
-        from content_generator import generate_daily_post
+        from content_generator import generate_daily_post, fact_check
         from image_generator import generate_and_upload_image
+        from concurrent.futures import ThreadPoolExecutor
         import database as db
         from notifications import send_telegram_notification
+
+        # Clear any old pending posts so the new one has a clean queue
+        db.expire_all_pending_posts()
 
         today_mm_dd = datetime.now(timezone.utc).strftime("%m-%d")
         
@@ -49,7 +53,13 @@ def _job_generate_daily_post():
         else:
             post_data = generate_daily_post()
 
-        image_url = generate_and_upload_image(post_data)
+        # Run fact-check + image generation in PARALLEL
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future_fc  = executor.submit(fact_check, post_data)
+            future_img = executor.submit(generate_and_upload_image, post_data)
+            post_data["fact_check_status"] = future_fc.result(timeout=30)
+            image_url = future_img.result(timeout=60)
+
         if image_url:
             post_data["image_url"] = image_url
 
@@ -65,12 +75,17 @@ def _job_generate_daily_post():
         logger.exception("❌ Daily post generation failed: %s", e)
 
 
+
 def _job_cleanup_expired():
-    """Delete posts older than 7 days."""
+    """Delete posts older than 7 days, including unprocessed generated/rejected ones."""
     logger.info("⏰ Scheduler: cleaning up expired posts …")
     try:
         import database as db
+        # Delete posts with an explicit expires_at timestamp that has passed
         count = db.delete_expired_posts()
+        # Also delete old generated/rejected/expired posts older than 7 days by created_at
+        count += db.delete_old_stale_posts(days=7)
+        logger.info("Cleanup done. Total deleted: %d", count)
     except Exception as e:
         logger.exception("❌ Cleanup job failed: %s", e)
 

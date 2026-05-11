@@ -1,4 +1,4 @@
-import requests
+import httpx
 import logging
 from config import settings
 
@@ -21,10 +21,11 @@ def send_telegram_notification(message: str):
     }
     
     try:
-        resp = requests.post(url, json=payload, timeout=10)
+        resp = httpx.post(url, json=payload, timeout=10)
         resp.raise_for_status()
         logger.info("Telegram notification sent successfully.")
         return True
     except Exception as e:
         logger.error("Failed to send Telegram notification: %s", e)
         return False
+

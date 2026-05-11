@@ -141,6 +141,37 @@ body {
   margin-top: 24px;
 }
 
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-wrapper input {
+  width: 100%;
+  padding-right: 48px;
+}
+.show-pass-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  padding: 10px 12px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+}
+.show-pass-btn:hover, .show-pass-btn:active { opacity: 1; }
+
 /* ── BUTTONS ──────────────────────────────────────────────── */
 .btn {
   display: inline-flex;

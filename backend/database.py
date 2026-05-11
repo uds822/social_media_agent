@@ -25,9 +25,11 @@ Table: posts
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
+import httpx
 from supabase import create_client, Client
 
 from config import settings
@@ -49,32 +51,54 @@ def get_client() -> Client:
     return _client
 
 
+def _reset_client():
+    """Force-reset the Supabase client on connection errors so the next call gets a fresh socket."""
+    global _client
+    _client = None
+
+
+def _supabase_call(fn, retries: int = 2, delay: float = 1.0):
+    """Execute a Supabase callable with automatic retry on transient network errors."""
+    last_err = None
+    for attempt in range(retries):
+        try:
+            return fn()
+        except (httpx.ConnectError, httpx.ReadError, httpx.RemoteProtocolError) as e:
+            last_err = e
+            logger.warning("Supabase connection error (attempt %d/%d): %s", attempt + 1, retries, e)
+            _reset_client()  # force fresh client/socket on next attempt
+            if attempt < retries - 1:
+                time.sleep(delay)
+        except Exception as e:
+            raise  # non-network errors bubble up immediately
+    raise last_err
+
+
 # ── CRUD helpers ─────────────────────────────────────────────────────────────
 
 def create_post(data: Dict[str, Any]) -> Dict[str, Any]:
     """Insert a new post row and return the created record."""
-    client = get_client()
     allowed_keys = {
         "post_type", "subject", "class_level", "topic", "image_url",
         "caption", "hashtags", "suggestions", "fact_check_status", "status"
     }
     db_data = {k: v for k, v in data.items() if k in allowed_keys}
-    result = client.table("posts").insert(db_data).execute()
-    return result.data[0]
+    return _supabase_call(lambda: get_client().table("posts").insert(db_data).execute().data[0])
 
 
 def get_pending_post() -> Optional[Dict[str, Any]]:
     """Return the most recent post in awaiting_approval state."""
-    client = get_client()
-    result = (
-        client.table("posts")
-        .select("*")
-        .eq("status", "awaiting_approval")
-        .order("created_at", desc=True)
-        .limit(1)
-        .execute()
-    )
-    return result.data[0] if result.data else None
+    def _query():
+        result = (
+            get_client().table("posts")
+            .select("*")
+            .eq("status", "awaiting_approval")
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        return result.data[0] if result.data else None
+    return _supabase_call(_query)
 
 
 def get_post_by_id(post_id: str) -> Optional[Dict[str, Any]]:
@@ -121,6 +145,28 @@ def delete_expired_posts() -> int:
     count = len(result.data) if result.data else 0
     logger.info("Deleted %d expired posts", count)
     return count
+
+
+def delete_old_stale_posts(days: int = 7) -> int:
+    """Hard-delete generated/rejected/expired posts older than `days` days.
+    These never get expires_at set so delete_expired_posts() misses them."""
+    client = get_client()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    stale_statuses = ["generated", "rejected", "expired", "failed"]
+    total = 0
+    for status in stale_statuses:
+        result = (
+            client.table("posts")
+            .delete()
+            .eq("status", status)
+            .lt("created_at", cutoff)
+            .execute()
+        )
+        total += len(result.data) if result.data else 0
+    if total > 0:
+        logger.info("Deleted %d stale posts (generated/rejected/expired/failed)", total)
+    return total
+
 
 
 def clear_all_posts() -> int:

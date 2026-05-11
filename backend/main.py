@@ -23,6 +23,7 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, status
 from fastapi.middleware.cors import CORSMiddleware
+from concurrent.futures import ThreadPoolExecutor
 from pydantic import BaseModel
 
 import auth
@@ -224,18 +225,27 @@ def update_api_keys(req: UpdateKeysRequest, _: str = Depends(auth.get_current_ad
 # ── Post generation ───────────────────────────────────────────────────────────
 
 def _run_generation(post_type, subject, class_level, language="english"):
-    """Background task: generate post, create image, save to DB."""
+    """Background task: generate post text, then fact-check + image in parallel."""
     try:
-        from content_generator import generate_daily_post
+        from content_generator import generate_daily_post, fact_check
         from image_generator import generate_and_upload_image
 
+        # Step 1: Generate post text (LLM call 1)
         post_data = generate_daily_post(post_type, subject, class_level, language)
-        image_url = generate_and_upload_image(post_data)
+
+        # Step 2: Fact-check + image generation in PARALLEL (saves ~15-30s)
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future_fc  = executor.submit(fact_check, post_data)
+            future_img = executor.submit(generate_and_upload_image, post_data)
+            fact_status = future_fc.result(timeout=30)
+            image_url   = future_img.result(timeout=60)
+
+        post_data["fact_check_status"] = fact_status
         if image_url:
             post_data["image_url"] = image_url
 
         db.create_post(post_data)
-        logger.info("✅ Post generated manually: type=%s language=%s", post_type, language)
+        logger.info("✅ Post generated: type=%s language=%s fact=%s", post_type, language, fact_status)
     except Exception as e:
         logger.exception("❌ Manual generation failed: %s", e)
 
@@ -257,10 +267,14 @@ def generate_post(
 
 @app.get("/api/posts/pending", tags=["Posts"])
 def get_pending(_: str = Depends(auth.get_current_admin)):
-    post = db.get_pending_post()
-    if not post:
-        return {"post": None, "message": "No post is awaiting approval. Use /api/posts/generate to create one."}
-    return {"post": post}
+    try:
+        post = db.get_pending_post()
+        if not post:
+            return {"post": None, "message": "No post is awaiting approval."}
+        return {"post": post}
+    except Exception as e:
+        logger.warning("Supabase unavailable for pending query: %s", e)
+        return {"post": None, "message": "Database temporarily unavailable. Retrying…"}
 
 
 # ── Post by ID ────────────────────────────────────────────────────────────────
