@@ -5,8 +5,7 @@
 
 // ── Configuration ────────────────────────────────────────────────────────────
 // Auto-detect backend from same host as frontend (works on phone, laptop, any device)
-const DEFAULT_API = `${window.location.protocol}//${window.location.hostname}:8000`;
-
+const DEFAULT_API = "https://social-media-agent-47b8.onrender.com";
 function getApiBase() {
   return localStorage.getItem('buniyaad_api_url') || DEFAULT_API;
 }
@@ -44,10 +43,10 @@ async function api(path, method = 'GET', body = null) {
 // ── Auth ──────────────────────────────────────────────────────────────────────
 async function handleLogin(e) {
   e.preventDefault();
-  const btn     = document.getElementById('login-btn');
+  const btn = document.getElementById('login-btn');
   const btnText = document.getElementById('login-btn-text');
   const spinner = document.getElementById('login-spinner');
-  const errMsg  = document.getElementById('login-error');
+  const errMsg = document.getElementById('login-error');
 
   btnText.textContent = 'Signing in…';
   spinner.classList.remove('hidden');
@@ -73,7 +72,7 @@ async function handleLogin(e) {
 
 function togglePassword() {
   const input = document.getElementById('login-password');
-  const btn   = document.getElementById('show-pass-btn');
+  const btn = document.getElementById('show-pass-btn');
   if (input.type === 'password') {
     input.type = 'text';
     btn.textContent = '🙈 HIDE PASSWORD';
@@ -132,7 +131,7 @@ function showTab(tabId) {
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentPost = null;
-let editingCaption  = false;
+let editingCaption = false;
 let editingHashtags = false;
 
 // ── Today's post ──────────────────────────────────────────────────────────────
@@ -155,8 +154,8 @@ async function loadPendingPost() {
 
 function setPostState(state) {
   const loading = document.getElementById('post-loading');
-  const empty   = document.getElementById('post-empty');
-  const card    = document.getElementById('post-card');
+  const empty = document.getElementById('post-empty');
+  const card = document.getElementById('post-card');
 
   // Force hide all three (add hidden class)
   loading.classList.add('hidden');
@@ -194,16 +193,16 @@ function renderPost(post) {
   // Fact check
   const fc = document.getElementById('fact-check-indicator');
   const fcMap = {
-    verified:   '<span class="badge" style="background:linear-gradient(135deg,#1B5E20,#2E7D32)">✅ Fact Verified</span>',
+    verified: '<span class="badge" style="background:linear-gradient(135deg,#1B5E20,#2E7D32)">✅ Fact Verified</span>',
     unverified: '<span class="badge" style="background:linear-gradient(135deg,#E65100,#F57C00)">⚠️ Fact Unverified</span>',
-    failed:     '<span class="badge" style="background:linear-gradient(135deg,#7F0000,#B71C1C)">❌ Fact Check Failed</span>',
+    failed: '<span class="badge" style="background:linear-gradient(135deg,#7F0000,#B71C1C)">❌ Fact Check Failed</span>',
   };
   fc.innerHTML = fcMap[post.fact_check_status] || '';
 
   // Caption & hashtags
-  document.getElementById('caption-display').textContent  = post.caption  || '';
+  document.getElementById('caption-display').textContent = post.caption || '';
   document.getElementById('hashtags-display').textContent = post.hashtags || '';
-  document.getElementById('caption-edit').value  = post.caption  || '';
+  document.getElementById('caption-edit').value = post.caption || '';
   document.getElementById('hashtags-edit').value = post.hashtags || '';
 
   document.getElementById('post-suggestions').textContent = post.suggestions || 'No suggestions available.';
@@ -220,11 +219,11 @@ function renderPost(post) {
 }
 
 function formatPostType(t) {
-  const m = { 
-    question_of_day: 'Q of the Day', 
+  const m = {
+    question_of_day: 'Q of the Day',
     word_of_day: 'Word of Day',
-    interesting_fact: 'Interesting Fact', 
-    festival_greeting: 'Festival', 
+    interesting_fact: 'Interesting Fact',
+    festival_greeting: 'Festival',
     trending_awareness: 'Trending/Exam',
     quiz_poll: 'Quiz / Poll',
     motivational_quote: 'Motivation'
@@ -263,10 +262,10 @@ async function generatePost(postType, subject, classLevel) {
       : selectedLanguage;
 
     await api('/api/posts/generate', 'POST', {
-      post_type:   postType   || null,
-      subject:     subject    || null,
+      post_type: postType || null,
+      subject: subject || null,
       class_level: classLevel || null,
-      language:    langToSend,
+      language: langToSend,
     });
     // Poll every 3s up to 20 times (~65s total)
     let attempts = 0;
@@ -285,7 +284,7 @@ async function generatePost(postType, subject, classLevel) {
           icon.textContent = '✨';
           return;
         }
-      } catch (_) {}
+      } catch (_) { }
       if (attempts < 20) {
         setTimeout(poll, 3000);
       } else {
@@ -310,7 +309,7 @@ async function downloadPost() {
   const caption = document.getElementById('caption-display').textContent || '';
   const hashtags = document.getElementById('hashtags-display').textContent || '';
   const fullText = `${caption}\n\n${hashtags}`.trim();
-  
+
   try {
     await navigator.clipboard.writeText(fullText);
     showStatusMsg('📋 Caption copied! Downloading image...', 'info');
@@ -325,7 +324,7 @@ async function downloadPost() {
     if (!response.ok) throw new Error('Network response was not ok');
     const blob = await response.blob();
     const blobUrl = window.URL.createObjectURL(blob);
-    
+
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = blobUrl;
@@ -333,10 +332,10 @@ async function downloadPost() {
     a.download = `buniyaad-${currentPost.post_type}-${Date.now()}.png`;
     document.body.appendChild(a);
     a.click();
-    
+
     window.URL.revokeObjectURL(blobUrl);
     document.body.removeChild(a);
-    
+
     setTimeout(() => {
       showStatusMsg('✅ Image downloaded & Caption copied! Ready to post manually.', 'success');
     }, 1500);
@@ -424,7 +423,7 @@ function cancelEdits() {
 async function saveEdits() {
   if (!currentPost) return;
   const body = {};
-  if (editingCaption)  body.caption  = document.getElementById('caption-edit').value;
+  if (editingCaption) body.caption = document.getElementById('caption-edit').value;
   if (editingHashtags) body.hashtags = document.getElementById('hashtags-edit').value;
 
   try {
@@ -469,7 +468,7 @@ function buildHistoryCard(post) {
   }) : '';
 
   const igIcon = post.instagram_post_id ? '📸 Instagram' : '';
-  const fbIcon = post.facebook_post_id  ? '📘 Facebook'  : '';
+  const fbIcon = post.facebook_post_id ? '📘 Facebook' : '';
 
   card.innerHTML = `
     ${post.image_url
@@ -498,14 +497,14 @@ async function loadStatus() {
   try {
     const s = await api('/api/status');
     const items = [
-      ['OpenRouter API',s.openrouter_configured],
-      ['Groq API',      s.groq_configured],
-      ['NVIDIA API',    s.nvidia_configured],
-      ['Hugging Face',  s.huggingface_configured],
-      ['Supabase DB',   s.supabase_configured],
-      ['Cloudinary',    s.cloudinary_configured],
-      ['Meta (FB+IG)',  s.meta_configured],
-      ['Scheduler',     s.scheduler_running],
+      ['OpenRouter API', s.openrouter_configured],
+      ['Groq API', s.groq_configured],
+      ['NVIDIA API', s.nvidia_configured],
+      ['Hugging Face', s.huggingface_configured],
+      ['Supabase DB', s.supabase_configured],
+      ['Cloudinary', s.cloudinary_configured],
+      ['Meta (FB+IG)', s.meta_configured],
+      ['Scheduler', s.scheduler_running],
     ];
     list.innerHTML = items.map(([label, ok]) => `
       <div class="status-item">
@@ -516,8 +515,8 @@ async function loadStatus() {
     // Pre-populate model name inputs with current active models
     const modelMap = {
       'openrouter-model-input': s.openrouter_model,
-      'groq-model-input':       s.groq_model,
-      'nvidia-model-input':     s.nvidia_model,
+      'groq-model-input': s.groq_model,
+      'nvidia-model-input': s.nvidia_model,
       'huggingface-model-input': s.huggingface_model,
     };
     for (const [id, val] of Object.entries(modelMap)) {
@@ -612,22 +611,22 @@ async function saveApiKey(provider) {
   const inputId = `${provider}-key-input`;
   const btnId = `btn-save-${provider}`;
   const key = document.getElementById(inputId).value.trim();
-  
+
   if (!key) {
     alert('Please enter an API key.');
     return;
   }
-  
+
   const btn = document.getElementById(btnId);
   btn.textContent = 'Saving...';
   btn.disabled = true;
-  
+
   const payload = {};
   if (provider === 'openrouter') payload.openrouter_api_key = key;
   if (provider === 'groq') payload.groq_api_key = key;
   if (provider === 'nvidia') payload.nvidia_api_key = key;
   if (provider === 'huggingface') payload.huggingface_api_key = key;
-  
+
   try {
     const res = await api('/api/settings/keys', 'POST', payload);
     document.getElementById(inputId).value = '';
@@ -657,8 +656,8 @@ async function saveModelName(provider) {
 
   const payload = {};
   if (provider === 'openrouter') payload.openrouter_model = model;
-  if (provider === 'groq')       payload.groq_model = model;
-  if (provider === 'nvidia')     payload.nvidia_model = model;
+  if (provider === 'groq') payload.groq_model = model;
+  if (provider === 'nvidia') payload.nvidia_model = model;
   if (provider === 'huggingface') payload.huggingface_model = model;
 
   try {
@@ -698,7 +697,7 @@ function showStatusMsg(msg, type = 'info') {
 async function clearDatabase() {
   if (!confirm("Are you absolutely sure you want to clear the entire database? This cannot be undone.")) return;
   if (!confirm("Final warning: Delete all posts and history?")) return;
-  
+
   try {
     const res = await api('/api/posts/clear', 'DELETE');
     alert(res.message);
