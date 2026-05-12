@@ -1,5 +1,5 @@
 /**
- * app.js — EduPlatform Admin Dashboard
+ * app.js — Buniyaad Admin Dashboard
  * Handles auth, post loading, approval, editing, history, and settings.
  */
 
@@ -8,19 +8,19 @@
 const DEFAULT_API = `${window.location.protocol}//${window.location.hostname}:8000`;
 
 function getApiBase() {
-  return localStorage.getItem('eduplatform_api_url') || DEFAULT_API;
+  return localStorage.getItem('buniyaad_api_url') || DEFAULT_API;
 }
 
 function getToken() {
-  return localStorage.getItem('eduplatform_token');
+  return localStorage.getItem('buniyaad_token');
 }
 
 function setToken(t) {
-  localStorage.setItem('eduplatform_token', t);
+  localStorage.setItem('buniyaad_token', t);
 }
 
 function clearToken() {
-  localStorage.removeItem('eduplatform_token');
+  localStorage.removeItem('buniyaad_token');
 }
 
 // ── API helpers ───────────────────────────────────────────────────────────────
@@ -302,6 +302,52 @@ async function generatePost(postType, subject, classLevel) {
   }
 }
 
+// ── Download & Copy (Manual Posting) ──────────────────────────────────────────
+async function downloadPost() {
+  if (!currentPost || !currentPost.image_url) return;
+
+  // 1. Copy caption and hashtags to clipboard
+  const caption = document.getElementById('caption-display').textContent || '';
+  const hashtags = document.getElementById('hashtags-display').textContent || '';
+  const fullText = `${caption}\n\n${hashtags}`.trim();
+  
+  try {
+    await navigator.clipboard.writeText(fullText);
+    showStatusMsg('📋 Caption copied! Downloading image...', 'info');
+  } catch (err) {
+    console.error('Clipboard copy failed:', err);
+  }
+
+  // 2. Download the image
+  try {
+    // Fetch blob to force a download instead of navigating
+    const response = await fetch(currentPost.image_url);
+    if (!response.ok) throw new Error('Network response was not ok');
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = blobUrl;
+    // e.g., buniyaad-word_of_day-168000000.png
+    a.download = `buniyaad-${currentPost.post_type}-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
+    
+    setTimeout(() => {
+      showStatusMsg('✅ Image downloaded & Caption copied! Ready to post manually.', 'success');
+    }, 1500);
+  } catch (err) {
+    console.error('Download failed:', err);
+    // Fallback: just open image in new tab if CORS blocks the download
+    window.open(currentPost.image_url, '_blank');
+    showStatusMsg('✅ Caption copied! Long-press or right-click the opened image to save it.', 'success');
+  }
+}
+
 // ── Approve ───────────────────────────────────────────────────────────────────
 async function approvePost() {
   if (!currentPost) return;
@@ -464,7 +510,7 @@ async function loadStatus() {
     list.innerHTML = items.map(([label, ok]) => `
       <div class="status-item">
         <span><span class="status-dot ${ok ? 'dot-ok' : 'dot-err'}"></span>${label}</span>
-        <span style="font-size:12px;color:${ok ? '#A5D6A7' : '#EF9A9A'}">${ok ? 'Connected' : 'Not Configured'}</span>
+        <span style="font-size:12px;font-weight:600;color:${ok ? '#34d399' : '#fca5a5'}">${ok ? 'Connected' : 'Not Configured'}</span>
       </div>`).join('');
 
     // Pre-populate model name inputs with current active models
@@ -478,6 +524,9 @@ async function loadStatus() {
       const el = document.getElementById(id);
       if (el && val) el.value = val;
     }
+
+    // Highlight whichever provider is currently active
+    if (s.active_provider) highlightActiveProvider(s.active_provider);
 
     // Update Top Badges
     const badgeGen = document.getElementById('ui-badge-generator');
@@ -494,10 +543,66 @@ async function loadStatus() {
   }
 }
 
+function highlightActiveProvider(provider) {
+  const ids = ['nvidia', 'groq', 'openrouter', 'huggingface'];
+  ids.forEach(p => {
+    const btn = document.getElementById(`prov-btn-${p}`);
+    if (btn) btn.classList.toggle('provider-active', p === provider.toLowerCase());
+  });
+}
+
+async function setActiveProvider(provider) {
+  // Optimistic UI update
+  highlightActiveProvider(provider);
+  const msgEl = document.getElementById('provider-save-msg');
+  if (msgEl) { msgEl.style.display = 'none'; }
+
+  try {
+    await api('/api/settings/keys', 'POST', { active_provider: provider });
+    // Update badge immediately with provider name + current model from input
+    _refreshGeneratorBadge(provider);
+    if (msgEl) {
+      msgEl.style.color = '#34d399';
+      msgEl.textContent = `✅ Switched to ${provider.toUpperCase()}! It will be used for next generation.`;
+      msgEl.style.display = 'block';
+      setTimeout(() => { msgEl.style.display = 'none'; }, 5000);
+    }
+  } catch (err) {
+    if (msgEl) {
+      msgEl.style.color = '#fca5a5';
+      msgEl.textContent = `❌ Failed: ${err.message}`;
+      msgEl.style.display = 'block';
+    }
+  }
+}
+
+/** Helper: reads current model from the input field and updates the top badge. */
+function _refreshGeneratorBadge(provider) {
+  const badgeGen = document.getElementById('ui-badge-generator');
+  if (!badgeGen) return;
+  const colors = { nvidia: '#76d9f5', groq: '#34d399', openrouter: '#818cf8', huggingface: '#fbbf24' };
+  const labels = { nvidia: 'NVIDIA', groq: 'Groq', openrouter: 'OpenRouter', huggingface: 'HuggingFace' };
+  // Read model from the input that is currently shown on the settings page
+  const modelInput = document.getElementById(`${provider}-model-input`);
+  const model = modelInput ? modelInput.value.trim() : '';
+  badgeGen.textContent = model ? `${labels[provider]} (${model})` : (labels[provider] || provider);
+  badgeGen.style.color = colors[provider] || '#fff';
+}
+
+/** Read which provider is currently active (from highlighted button). */
+function _getActiveProvider() {
+  const ids = ['nvidia', 'groq', 'openrouter', 'huggingface'];
+  for (const p of ids) {
+    const btn = document.getElementById(`prov-btn-${p}`);
+    if (btn && btn.classList.contains('provider-active')) return p;
+  }
+  return null;
+}
+
 function saveServerUrl() {
   const url = document.getElementById('server-url-input').value.trim().replace(/\/$/, '');
   if (url) {
-    localStorage.setItem('eduplatform_api_url', url);
+    localStorage.setItem('buniyaad_api_url', url);
     document.getElementById('server-url-display').textContent = url;
     showStatusMsg('✅ Backend URL saved!', 'success');
   }
@@ -557,12 +662,25 @@ async function saveModelName(provider) {
   if (provider === 'huggingface') payload.huggingface_model = model;
 
   try {
-    const res = await api('/api/settings/keys', 'POST', payload);
-    alert(`✅ Model updated! Now using: ${model}`);
+    await api('/api/settings/keys', 'POST', payload);
+    btn.textContent = '✅ Saved';
+    setTimeout(() => { btn.textContent = 'Save'; }, 2000);
+
+    // If this is the active provider, update the top badge with the new model
+    const activeProvider = _getActiveProvider();
+    if (activeProvider === provider) {
+      _refreshGeneratorBadge(provider);
+    }
+
+    // Also update fact-checker badge if groq model changed
+    if (provider === 'groq') {
+      const badgeChk = document.getElementById('ui-badge-checker');
+      if (badgeChk) badgeChk.textContent = `Groq (${model})`;
+    }
   } catch (err) {
     alert(`Error: ${err.message}`);
-  } finally {
     btn.textContent = 'Save';
+  } finally {
     btn.disabled = false;
   }
 }

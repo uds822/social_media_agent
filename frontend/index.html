@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>EduPlatform Admin – Social Media Agent</title>
+  <title>Buniyaad Admin – Social Media Agent</title>
   <meta name="description" content="Admin panel for Edu Platform AI social media content approval system." />
   
   <!-- PWA Meta Tags -->
@@ -26,7 +26,7 @@
     <div class="login-card glass-card">
       <div class="login-logo">
         <div class="logo-icon">🎓</div>
-        <h1 class="brand-name">EduPlatform</h1>
+        <h1 class="brand-name">Buniyaad</h1>
         <p class="brand-sub">The Foundation — Admin Portal</p>
       </div>
       <form id="login-form" onsubmit="handleLogin(event)">
@@ -47,7 +47,7 @@
         </button>
         <p id="login-error" class="error-msg hidden"></p>
       </form>
-      <p class="login-hint">City, State | theeduplatform.com</p>
+      <p class="login-hint">City, State | thebuniyaad.com</p>
     </div>
   </div>
 </div>
@@ -58,7 +58,7 @@
   <!-- Top Nav -->
   <nav class="topnav">
     <div class="nav-left">
-      <span class="nav-logo">🎓 EduPlatform</span>
+      <span class="nav-logo">🎓 Buniyaad</span>
     </div>
     <div class="nav-right">
       <button class="nav-btn" onclick="showTab('tab-today')" id="nav-today">Today</button>
@@ -103,7 +103,7 @@
       <p>Select language above, then click a post type to generate with AI.</p>
       <div class="lang-note" id="lang-note-en">🇬🇧 <strong>English</strong> — CBSE / NCERT syllabus, Classes 6–10</div>
       <div class="lang-note lang-note-hindi hidden" id="lang-note-hi">🇮🇳 <strong>हिंदी</strong> — Bihar Board (BSEB), Class 9 &amp; 10 only</div>
-      <div class="post-type-grid" style="grid-template-columns: repeat(4, 1fr);">
+      <div class="post-type-grid">
         <button class="type-btn" onclick="generatePost('trending_awareness', 'Board Exams')">🔥 Exam/Trending</button>
         <button class="type-btn" onclick="generatePost('quiz_poll', 'Science', 'Class 10')">❓ Quiz / Poll</button>
         <button class="type-btn" onclick="generatePost('motivational_quote')">🌟 Motivational Quote</button>
@@ -165,8 +165,11 @@
 
           <!-- Action buttons -->
           <div class="action-row">
-            <button class="btn btn-success btn-action" id="approve-btn" onclick="approvePost()">
-              ✅ Approve &amp; Publish
+            <button class="btn btn-success btn-action" id="approve-btn" onclick="approvePost()" title="Auto-post to Facebook & Instagram">
+              ✅ Publish
+            </button>
+            <button class="btn btn-action" style="background: rgba(129,140,248,0.1); color: #818cf8; border: 1px solid rgba(129,140,248,0.3);" onclick="downloadPost()" title="Download image and copy caption">
+              📥 Download & Copy
             </button>
             <button class="btn btn-warning btn-action" onclick="regeneratePost()">
               🔄 Regenerate
@@ -215,7 +218,7 @@
           <div class="info-row"><span>Name</span><span>Edu Platform</span></div>
           <div class="info-row"><span>Location</span><span>City, State</span></div>
           <div class="info-row"><span>Phone</span><span>1234567890 / 9643557068</span></div>
-          <div class="info-row"><span>Website</span><a href="https://theeduplatform.com" target="_blank">theeduplatform.com</a></div>
+          <div class="info-row"><span>Website</span><a href="https://thebuniyaad.com" target="_blank">thebuniyaad.com</a></div>
           <div class="info-row"><span>Courses</span><span>Classes 6–12 | JEE | NEET | BPSC</span></div>
         </div>
       </div>
@@ -248,9 +251,22 @@
       </div>
       <div class="glass-card settings-card">
         <h3>🔑 LLM API Configuration</h3>
-        <p style="font-size: 13px; margin-bottom: 15px; color: rgba(255,255,255,0.7); line-height: 1.5;">
+        <p style="font-size: 13px; margin-bottom: 20px; color: rgba(255,255,255,0.7); line-height: 1.5;">
           Paste a new API key if the current one stops working. Update the model name if the provider retires a model.
         </p>
+
+        <!-- ⚡ ACTIVE PROVIDER SELECTOR -->
+        <div style="border: 1px solid rgba(99,102,241,0.3); border-radius: 16px; padding: 20px; margin-bottom: 20px; background: rgba(99,102,241,0.08);">
+          <div style="font-size:13px; font-weight:700; color:#818cf8; margin-bottom:14px; text-transform:uppercase; letter-spacing:1px;">⚡ Active Generator Provider</div>
+          <p style="font-size:13px; color:rgba(255,255,255,0.6); margin-bottom:16px; line-height:1.5;">Select which provider to USE FIRST for content generation. Others remain as fallbacks.</p>
+          <div id="provider-selector" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <button id="prov-btn-nvidia"      class="provider-btn" onclick="setActiveProvider('nvidia')"      style="border:1px solid rgba(118,217,245,0.3); color:#76d9f5;">🖥️ NVIDIA</button>
+            <button id="prov-btn-groq"        class="provider-btn" onclick="setActiveProvider('groq')"        style="border:1px solid rgba(52,211,153,0.3); color:#34d399;">⚡ Groq</button>
+            <button id="prov-btn-openrouter"  class="provider-btn" onclick="setActiveProvider('openrouter')"  style="border:1px solid rgba(129,140,248,0.3); color:#818cf8;">🔀 OpenRouter</button>
+            <button id="prov-btn-huggingface" class="provider-btn" onclick="setActiveProvider('huggingface')" style="border:1px solid rgba(251,191,36,0.3); color:#fbbf24;">🤗 HuggingFace</button>
+          </div>
+          <div id="provider-save-msg" style="display:none; margin-top:12px; font-size:13px; font-weight:600; color:#34d399;"></div>
+        </div>
 
         <!-- OpenRouter -->
         <div style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:14px; margin-bottom:14px;">

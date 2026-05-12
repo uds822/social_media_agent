@@ -1,4 +1,4 @@
-# 🎓 EduPlatform Social Media Agent — Complete Setup Guide
+# 🎓 Buniyaad Social Media Agent — Complete Setup Guide
 
 > **Everything you need to register, configure, and run the system.**
 
@@ -108,7 +108,7 @@ Social_media_agent/
 1. Go to **https://supabase.com** → **"Start your project"**
 2. Sign up with GitHub or email
 3. Click **"New Project"**:
-   - Name: `eduplatform-agent`
+   - Name: `buniyaad-agent`
    - Database password: (save it somewhere safe)
    - Region: **South Asia (ap-south-1)** — closest to Bihar
 4. Wait ~2 minutes for project to initialise
@@ -161,14 +161,14 @@ Social_media_agent/
 
 **Pre-requirements before you start:**
 - Instagram account is **Business or Creator** (not personal)
-- Instagram is **linked to your EduPlatform Facebook Page**
+- Instagram is **linked to your Buniyaad Facebook Page**
 - You have **Admin access** to the Facebook Page
 
 **Step A: Convert Instagram to Business Account**
 1. Open Instagram → Profile → Menu (☰) → Settings
 2. Tap **"Account"** → **"Switch to Professional Account"**
 3. Choose **"Business"** → Category: **"Education"**
-4. Connect to your EduPlatform Facebook Page
+4. Connect to your Buniyaad Facebook Page
 
 **Step B: Create Meta Developer Account**
 1. Go to **https://developers.facebook.com**
@@ -178,7 +178,7 @@ Social_media_agent/
 **Step C: Create a Meta App**
 1. Dashboard → **"Create App"**
 2. Use case: **"Other"** → App type: **"Business"**
-3. App name: `EduPlatform Social Agent`
+3. App name: `Buniyaad Social Agent`
 4. Click **"Create App"**
 
 **Step D: Add Products**
@@ -188,7 +188,7 @@ Social_media_agent/
 
 **Step E: Get Page Access Token**
 1. Go to **https://developers.facebook.com/tools/explorer**
-2. Select your app → Select your **EduPlatform Facebook Page**
+2. Select your app → Select your **Buniyaad Facebook Page**
 3. Add permissions: `pages_manage_posts`, `pages_read_engagement`, `instagram_basic`, `instagram_content_publish`
 4. Click **"Generate Access Token"** → approve the popup
 5. Copy the token → paste as `FACEBOOK_PAGE_ACCESS_TOKEN`

@@ -32,26 +32,28 @@ FESTIVALS = {
 }
 
 def _job_generate_daily_post():
-    """Generate and store today's post in the DB. Auto-handles festivals."""
-    logger.info("⏰ Scheduler: generating daily post …")
+    """Auto-generate today's post at 4 AM so it's ready for 7 AM notification."""
+    logger.info("⏰ Scheduler: auto-generating today's post …")
     try:
-        from content_generator import generate_daily_post, fact_check
+        from content_generator import generate_daily_post, fact_check, WEEKLY_SCHEDULE
         from image_generator import generate_and_upload_image
         from concurrent.futures import ThreadPoolExecutor
+        from datetime import datetime, timezone
         import database as db
-        from notifications import send_telegram_notification
 
         # Clear any old pending posts so the new one has a clean queue
         db.expire_all_pending_posts()
 
-        today_mm_dd = datetime.now(timezone.utc).strftime("%m-%d")
+        # Check if today is a festival
+        today = datetime.now(timezone.utc)
+        today_mm_dd = today.strftime("%m-%d")
         
         if today_mm_dd in FESTIVALS:
             festival_name = FESTIVALS[today_mm_dd]
             logger.info("🎉 Today is %s! Auto-generating festival post.", festival_name)
             post_data = generate_daily_post(post_type="festival_greeting", subject=festival_name, language="hindi")
         else:
-            post_data = generate_daily_post()
+            post_data = generate_daily_post(for_tomorrow=False)
 
         # Run fact-check + image generation in PARALLEL
         with ThreadPoolExecutor(max_workers=2) as executor:
@@ -64,15 +66,41 @@ def _job_generate_daily_post():
             post_data["image_url"] = image_url
 
         db.create_post(post_data)
-        logger.info("✅ Daily post created and stored.")
-        
-        # Send Telegram Notification
-        post_type_label = post_data.get("post_type", "new")
-        msg = f"🎉 *EduPlatform Dashboard*\nA {post_type_label.replace('_', ' ').title()} post has been automatically generated! Log in to the dashboard to approve and publish."
-        send_telegram_notification(msg)
+        logger.info("✅ Today's post auto-generated and stored. Waiting for 7 AM notification.")
         
     except Exception as e:
-        logger.exception("❌ Daily post generation failed: %s", e)
+        logger.exception("❌ Auto-generation failed: %s", e)
+        # Notify admin about the failure too
+        try:
+            from notifications import send_telegram_notification
+            send_telegram_notification(f"⚠️ *Auto-generation failed*\nError: {str(e)[:200]}\nPlease generate manually from the dashboard.")
+        except:
+            pass
+
+def _job_send_morning_notification():
+    """Send the 7 AM Telegram notification if a post is ready."""
+    logger.info("⏰ Scheduler: sending 7 AM morning notification …")
+    try:
+        import database as db
+        from notifications import send_telegram_notification
+        
+        post = db.get_pending_post()
+        if post:
+            post_type = post.get("post_type", "new")
+            post_label = post_type.replace('_', ' ').title()
+            msg = (
+                f"📋 *Buniyaad — Post Ready for Review*\n\n"
+                f"Today's *{post_label}* post has been auto-generated!\n\n"
+                f"🔗 Open the dashboard to review, edit, and approve it.\n"
+                f"Fact Check: {post.get('fact_check_status', 'N/A')}"
+            )
+            send_telegram_notification(msg)
+        else:
+            logger.warning("No pending post found for 7 AM notification.")
+    except Exception as e:
+        logger.exception("❌ Morning notification failed: %s", e)
+
+
 
 
 
@@ -125,7 +153,7 @@ def start_scheduler():
     global _scheduler
     _scheduler = AsyncIOScheduler(timezone="Asia/Kolkata")
 
-    # Daily post — e.g. 07:00 IST
+    # Auto-generate today's post at 4:00 AM IST
     _scheduler.add_job(
         _job_generate_daily_post,
         CronTrigger(
@@ -134,7 +162,20 @@ def start_scheduler():
             timezone="Asia/Kolkata",
         ),
         id="daily_post",
-        name="Generate Daily Post",
+        name="Auto-Generate Post (4 AM)",
+        replace_existing=True,
+    )
+
+    # Send notification at 7:00 AM IST
+    _scheduler.add_job(
+        _job_send_morning_notification,
+        CronTrigger(
+            hour=settings.notification_hour,
+            minute=settings.notification_minute,
+            timezone="Asia/Kolkata",
+        ),
+        id="morning_notification",
+        name="Morning Notification (7 AM)",
         replace_existing=True,
     )
 

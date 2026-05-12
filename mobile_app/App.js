@@ -10,7 +10,7 @@ export default function App() {
 
   useEffect(() => {
     // Load saved URL on startup
-    AsyncStorage.getItem('eduplatform_url').then((savedUrl) => {
+    AsyncStorage.getItem('buniyaad_url').then((savedUrl) => {
       if (savedUrl) {
         setUrl(savedUrl);
         setInputUrl(savedUrl);
@@ -24,12 +24,12 @@ export default function App() {
     if (!finalUrl.startsWith('http')) {
       finalUrl = 'http://' + finalUrl;
     }
-    await AsyncStorage.setItem('eduplatform_url', finalUrl);
+    await AsyncStorage.setItem('buniyaad_url', finalUrl);
     setUrl(finalUrl);
   };
 
   const handleReset = async () => {
-    await AsyncStorage.removeItem('eduplatform_url');
+    await AsyncStorage.removeItem('buniyaad_url');
     setUrl('');
   };
 
@@ -46,7 +46,7 @@ export default function App() {
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#0D0F1A" />
         <View style={styles.setupCard}>
-          <Text style={styles.title}>🎓 EduPlatform Admin</Text>
+          <Text style={styles.title}>🎓 Buniyaad Admin</Text>
           <Text style={styles.subtitle}>Connect to your server to continue</Text>
           
           <Text style={styles.label}>Server IP / Localhost URL:</Text>

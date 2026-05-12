@@ -1,7 +1,7 @@
 {
-  "name": "EduPlatform Admin",
+  "name": "Buniyaad Admin",
   "short_name": "EduAdmin",
-  "description": "EduPlatform Admin Portal for Social Media Posts",
+  "description": "Buniyaad Admin Portal for Social Media Posts",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0D0F1A",

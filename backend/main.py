@@ -1,5 +1,5 @@
 """
-main.py — FastAPI application entry point for the EduPlatform Social Media Agent.
+main.py — FastAPI application entry point for the Buniyaad Social Media Agent.
 
 Endpoints:
   POST /auth/login          – get JWT token
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🚀 EduPlatform Social Media Agent starting …")
+    logger.info("🚀 Buniyaad Social Media Agent starting …")
     start_scheduler()
     yield
     logger.info("🛑 Shutting down …")
@@ -50,7 +50,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="EduPlatform Social Media Agent API",
+    title="Buniyaad Social Media Agent API",
     description="AI-powered social media content generation and publishing system for Edu Platform.",
     version="1.0.0",
     lifespan=lifespan,
@@ -105,6 +105,8 @@ class UpdateKeysRequest(BaseModel):
     groq_model: Optional[str] = None
     nvidia_model: Optional[str] = None
     huggingface_model: Optional[str] = None
+    # Active provider preference (openrouter | groq | nvidia | huggingface)
+    active_provider: Optional[str] = None
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -124,23 +126,24 @@ def login(req: LoginRequest):
 
 @app.get("/api/health", tags=["System"])
 def health():
-    return {"status": "ok", "service": "EduPlatform Social Media Agent", "version": "1.0.0"}
+    return {"status": "ok", "service": "Buniyaad Social Media Agent", "version": "1.0.0"}
 
 
 # ── Status ────────────────────────────────────────────────────────────────────
 
 @app.get("/api/status", tags=["System"])
 def api_status(_: str = Depends(auth.get_current_admin)):
-    # Determine active generator based on priority (NVIDIA -> HF -> OpenRouter)
-    if settings.nvidia_api_key:
-        active_gen = f"NVIDIA ({settings.nvidia_model})"
-        active_color = "#76d9f5"
-    elif settings.huggingface_api_key:
-        active_gen = f"Hugging Face ({settings.huggingface_model})"
-        active_color = "#fbbf24"
-    else:
-        active_gen = f"OpenRouter ({settings.openrouter_model})"
-        active_color = "#a78bfa"
+    # Determine active generator display based on settings.active_provider
+    provider_display = {
+        "openrouter":   (f"OpenRouter ({settings.openrouter_model})",  "#a78bfa"),
+        "groq":         (f"Groq ({settings.groq_model})",              "#34d399"),
+        "nvidia":       (f"NVIDIA ({settings.nvidia_model})",          "#76d9f5"),
+        "huggingface":  (f"HuggingFace ({settings.huggingface_model})", "#fbbf24"),
+    }
+    active_gen, active_color = provider_display.get(
+        settings.active_provider.lower(),
+        (f"NVIDIA ({settings.nvidia_model})", "#76d9f5")
+    )
 
     return {
         "openrouter_configured": bool(settings.openrouter_api_key),
@@ -160,6 +163,8 @@ def api_status(_: str = Depends(auth.get_current_admin)):
         "groq_model":         settings.groq_model,
         "nvidia_model":       settings.nvidia_model,
         "huggingface_model":  settings.huggingface_model,
+        # Active provider preference
+        "active_provider":    settings.active_provider,
         # Active providers for UI badges
         "active_generator_text": active_gen,
         "active_generator_color": active_color,
@@ -215,6 +220,14 @@ def update_api_keys(req: UpdateKeysRequest, _: str = Depends(auth.get_current_ad
         settings.huggingface_model = req.huggingface_model
         dotenv.set_key(env_path, "HUGGINGFACE_MODEL", req.huggingface_model)
         updates["huggingface_model"] = "updated"
+
+    if req.active_provider is not None:
+        valid_providers = ("openrouter", "groq", "nvidia", "huggingface")
+        if req.active_provider.lower() not in valid_providers:
+            raise HTTPException(status_code=400, detail=f"Invalid provider. Must be one of: {valid_providers}")
+        settings.active_provider = req.active_provider.lower()
+        dotenv.set_key(env_path, "ACTIVE_PROVIDER", req.active_provider.lower())
+        updates["active_provider"] = req.active_provider
         
     if not updates:
         return {"message": "No keys provided to update."}

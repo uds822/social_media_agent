@@ -19,14 +19,15 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 # ── Weekly content schedule ───────────────────────────────────────────────────
+# Posts are auto-generated at 10 PM the night before for next-day review.
 WEEKLY_SCHEDULE = {
-    0: ("word_of_day",       "English",        None),        # Monday
-    1: ("question_of_day",   "Mathematics",    None),        # Tuesday
-    2: ("interesting_fact",  "Science",        None),        # Wednesday
-    3: ("interesting_fact",  "History/GK",     None),        # Thursday
-    4: ("question_of_day",   "English Grammar", None),       # Friday
-    5: ("question_of_day",   "Mixed",          None),        # Saturday
-    6: ("admission_post",    "Promotional",    None),        # Sunday
+    0: ("word_of_day",          "English",         None),    # Monday
+    1: ("question_of_day",      "Mathematics",     None),    # Tuesday
+    2: ("interesting_fact",     "Science",         None),    # Wednesday
+    3: ("quiz_poll",            "History/GK",      None),    # Thursday
+    4: ("motivational_quote",   "Student Life",    None),    # Friday
+    5: ("trending_awareness",   "Exam Tips",       None),    # Saturday
+    6: ("admission_post",       "Promotional",     None),    # Sunday
 }
 
 CLASS_LEVELS_ENGLISH = ["Class 6", "Class 7", "Class 8", "Class 9", "Class 10"]  # CBSE
@@ -37,12 +38,12 @@ CLASS_LEVELS = CLASS_LEVELS_ENGLISH  # kept for any direct references
 BRAND = {
     "name": "Edu Platform",
     "phone": "1234567890 / 9643557068",
-    "website": "https://theeduplatform.com",
+    "website": "https://thebuniyaad.com",
     "address": "Janata Cinema Campus, Near Bhagat Singh Chowk, City, State – 841428",
     "courses": "CBSE / BSEB Classes 6–12 | JEE | NEET | BPSC",
 }
 
-HASHTAG_BASE = "#EduPlatformTheFoundation #EduPlatformCoaching #BiharEducation #StudyMotivation"
+HASHTAG_BASE = "#BuniyaadTheFoundation #BuniyaadCoaching #BiharEducation #StudyMotivation"
 
 
 # ── LLM clients ──────────────────────────────────────────────────────────────
@@ -77,15 +78,26 @@ def _huggingface_client() -> OpenAI:
 
 
 def _get_providers():
-    """Yields (client, model, name) based on configured API keys in priority order."""
+    """Yields (client, model, name) in priority order — preferred provider first, others as fallbacks."""
+    preferred = settings.active_provider.lower().strip()
+
+    # Build all available providers as (priority_order, client, model, name)
+    all_providers = []
     if settings.nvidia_api_key:
-        yield _nvidia_client(), settings.nvidia_model, "NVIDIA"
+        all_providers.append(("nvidia",       _nvidia_client(),      settings.nvidia_model,      "NVIDIA"))
     if settings.groq_api_key:
-        yield _groq_client(), settings.groq_model, "Groq"
+        all_providers.append(("groq",          _groq_client(),        settings.groq_model,        "Groq"))
     if settings.openrouter_api_key:
-        yield _openrouter_client(), settings.openrouter_model, "OpenRouter"
+        all_providers.append(("openrouter",    _openrouter_client(),  settings.openrouter_model,  "OpenRouter"))
     if settings.huggingface_api_key:
-        yield _huggingface_client(), settings.huggingface_model, "HuggingFace"
+        all_providers.append(("huggingface",   _huggingface_client(), settings.huggingface_model, "HuggingFace"))
+
+    # Sort: preferred provider first, preserve insertion order for the rest
+    preferred_first = [p for p in all_providers if p[0] == preferred]
+    rest            = [p for p in all_providers if p[0] != preferred]
+
+    for key, client, model, name in (preferred_first + rest):
+        yield client, model, name
 
 def _call_llm(system: str, user: str, max_tokens: int = 1024) -> str:
     """Generic LLM call with multi-provider fallback and error handling."""
@@ -171,7 +183,7 @@ Return JSON with these exact keys:
   "suggestions": "One tip for admin about this post"
 }}
 
-Brand CTA: "Learn more with EduPlatform! Call: {BRAND['phone']} | {BRAND['website']}"
+Brand CTA: "Learn more with Buniyaad! Call: {BRAND['phone']} | {BRAND['website']}"
 """
     raw = _call_llm(SYSTEM_PROMPT, prompt)
     data = json.loads(raw, strict=False)
@@ -201,7 +213,7 @@ Return JSON with these exact keys:
   "suggestions": "One tip for admin about this post"
 }}
 
-Brand CTA: "Improve your vocabulary with EduPlatform! Call: {BRAND['phone']}"
+Brand CTA: "Improve your vocabulary with Buniyaad! Call: {BRAND['phone']}"
 """
     raw = _call_llm(SYSTEM_PROMPT, prompt)
     data = json.loads(raw, strict=False)
@@ -230,7 +242,7 @@ Return JSON with these exact keys:
   "suggestions": "One tip for admin about this post"
 }}
 
-Brand CTA: "Stay curious with EduPlatform! Call: {BRAND['phone']} | {BRAND['website']}"
+Brand CTA: "Stay curious with Buniyaad! Call: {BRAND['phone']} | {BRAND['website']}"
 """
     raw = _call_llm(SYSTEM_PROMPT, prompt)
     data = json.loads(raw, strict=False)
@@ -245,7 +257,7 @@ Brand CTA: "Stay curious with EduPlatform! Call: {BRAND['phone']} | {BRAND['webs
 def generate_festival_greeting(festival_name: str, language: str = "english") -> Dict[str, Any]:
     lang_rule = HINDI_RULES if language == "hindi" else ""
     prompt = f"""
-Generate a festival greeting social media post for {festival_name} for EduPlatform coaching institute.
+Generate a festival greeting social media post for {festival_name} for Buniyaad coaching institute.
 
 {SAFETY_RULES}
 {lang_rule}
@@ -306,7 +318,7 @@ Return JSON with these exact keys:
   "suggestions": "One tip for admin about this post"
 }}
 
-Brand CTA: "Prepare smart with EduPlatform! Call: {BRAND['phone']} | {BRAND['website']}"
+Brand CTA: "Prepare smart with Buniyaad! Call: {BRAND['phone']} | {BRAND['website']}"
 """
     raw = _call_llm(SYSTEM_PROMPT, prompt)
     data = json.loads(raw, strict=False)
@@ -344,7 +356,7 @@ Return JSON with these exact keys:
   "suggestions": "One tip for admin about this post"
 }}
 
-Brand CTA: "Stay updated with EduPlatform! Call: {BRAND['phone']} | {BRAND['website']}"
+Brand CTA: "Stay updated with Buniyaad! Call: {BRAND['phone']} | {BRAND['website']}"
 """
     raw = _call_llm(SYSTEM_PROMPT, prompt)
     data = json.loads(raw, strict=False)
@@ -380,7 +392,7 @@ Return JSON with these exact keys:
   "suggestions": "One tip for admin about this post"
 }}
 
-Brand CTA: "Test your knowledge with EduPlatform! Call: {BRAND['phone']}"
+Brand CTA: "Test your knowledge with Buniyaad! Call: {BRAND['phone']}"
 """
     raw = _call_llm(SYSTEM_PROMPT, prompt)
     data = json.loads(raw, strict=False)
@@ -408,7 +420,7 @@ Return JSON with these exact keys:
   "suggestions": "One tip for admin about this post"
 }}
 
-Brand CTA: "Achieve your dreams with EduPlatform! Call: {BRAND['phone']}"
+Brand CTA: "Achieve your dreams with Buniyaad! Call: {BRAND['phone']}"
 """
     raw = _call_llm(SYSTEM_PROMPT, prompt)
     data = json.loads(raw, strict=False)
@@ -458,14 +470,20 @@ def generate_daily_post(
     subject: Optional[str] = None,
     class_level: Optional[str] = None,
     language: str = "english",
+    for_tomorrow: bool = False,
 ) -> Dict[str, Any]:
     """
-    Generate today's post. If post_type is None, pick automatically
-    from the weekly schedule.
+    Generate today's (or tomorrow's) post. If post_type is None, pick
+    automatically from the weekly schedule.
     language: 'english' (default) or 'hindi' (Bihar Board 9-10)
+    for_tomorrow: if True, use tomorrow's weekday from the schedule.
     """
     if post_type is None:
-        weekday = datetime.now().weekday()
+        from datetime import timedelta
+        target_date = datetime.now()
+        if for_tomorrow:
+            target_date += timedelta(days=1)
+        weekday = target_date.weekday()
         scheduled_type, scheduled_subject, _ = WEEKLY_SCHEDULE[weekday]
         post_type = scheduled_type
         subject   = subject or scheduled_subject

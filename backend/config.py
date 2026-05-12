@@ -9,7 +9,7 @@ from pydantic import Field
 class Settings(BaseSettings):
     # Admin
     admin_username: str = "admin"
-    admin_password: str = "eduplatform2024"
+    admin_password: str = "buniyaad2024"
     jwt_secret: str = "CHANGE_ME"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7  # 7 days
@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     huggingface_base_url: str = "https://api-inference.huggingface.co/models"
     huggingface_model: str = "meta-llama/Llama-3.3-70B-Instruct"
 
+    # Active provider preference — tried FIRST, others are fallbacks
+    # Valid values: openrouter | groq | nvidia | huggingface
+    active_provider: str = "nvidia"
+
     # Supabase
     supabase_url: str = ""
     supabase_anon_key: str = ""
@@ -48,9 +52,13 @@ class Settings(BaseSettings):
     facebook_page_access_token: str = ""
     instagram_business_account_id: str = ""
 
-    # Scheduler
-    daily_post_hour: int = 7
+    # Scheduler (auto-generates post at this time)
+    daily_post_hour: int = 4
     daily_post_minute: int = 0
+    
+    # Send morning Telegram notification at this time
+    notification_hour: int = 7
+    notification_minute: int = 0
 
     # Telegram Notification
     telegram_bot_token: str = ""

@@ -193,7 +193,7 @@ def generate_and_upload_image(post_data: Dict[str, Any]) -> Optional[str]:
 
         result = cloudinary.uploader.upload(
             png_bytes,
-            folder="eduplatform/posts",
+            folder="buniyaad/posts",
             resource_type="image",
             format="jpg",
             transformation=[{"quality": "auto:best"}],
