@@ -367,7 +367,13 @@ async function generatePost(postType, subject, classLevel) {
           currentPost = data.post;
           renderPost(data.post);
           setPostState('post');
-          showStatusMsg('Post generated successfully!', 'success');
+          
+          if (!data.post.image_url) {
+            showStatusMsg('Post text ready! Generating image...', 'info');
+            pollForImage(data.post.id);
+          } else {
+            showStatusMsg('Post generated successfully!', 'success');
+          }
           icon.textContent = '✨';
           return;
         }
@@ -386,6 +392,31 @@ async function generatePost(postType, subject, classLevel) {
     showStatusMsg('Generation failed: ' + err.message, 'error');
     icon.textContent = '✨';
   }
+}
+
+async function pollForImage(postId) {
+  let attempts = 0;
+  const poll = async () => {
+    attempts++;
+    try {
+      const data = await api('/api/posts/pending');
+      if (data && data.post && data.post.id === postId) {
+        if (data.post.image_url) {
+          currentPost = data.post;
+          renderPost(data.post);
+          showStatusMsg('Image generated successfully!', 'success');
+          return;
+        }
+      }
+    } catch (_) {}
+    
+    if (attempts < 20) {
+      setTimeout(poll, 3000);
+    } else {
+      showStatusMsg('Image generation timed out. Try refreshing.', 'error');
+    }
+  };
+  setTimeout(poll, 3000);
 }
 
 // ── Download & Copy (Manual Posting) ──────────────────────────────────────────
