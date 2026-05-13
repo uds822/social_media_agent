@@ -462,16 +462,19 @@ def _run_publish(post_id: str):
         if not post:
             return
 
-        fb_id, ig_id, error = publish_post(post)
+        fb_id, ig_id, error, resolved_image_url = publish_post(post)
         now = datetime.now(timezone.utc)
-        db.update_post(post_id, {
+        updates = {
             "status":            "published" if (fb_id or ig_id) else "failed",
             "published_at":      now.isoformat(),
             "facebook_post_id":  fb_id,
             "instagram_post_id": ig_id,
             "error_message":     error,
             "expires_at":        (now + timedelta(days=7)).isoformat(),
-        })
+        }
+        if resolved_image_url:
+            updates["image_url"] = resolved_image_url
+        db.update_post(post_id, updates)
         logger.info("✅ Post %s published. FB=%s IG=%s", post_id, fb_id, ig_id)
     except Exception as e:
         db.update_post(post_id, {"status": "failed", "error_message": str(e)})

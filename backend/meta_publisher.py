@@ -10,16 +10,40 @@ Required Meta App Permissions:
 """
 from __future__ import annotations
 
+import base64
 import logging
 from typing import Dict, Any, Optional, Tuple
 
 import httpx
 
 from config import settings
+from image_generator import upload_image_bytes_to_cloudinary
 
 logger = logging.getLogger(__name__)
 
 GRAPH_BASE = "https://graph.facebook.com/v19.0"
+
+
+def _ensure_publishable_image_url(image_url: str) -> Optional[str]:
+    """
+    Meta requires a public HTTPS image URL.
+    If we only have an inline data URL preview, upload it to Cloudinary now.
+    """
+    if not image_url:
+        return None
+    if image_url.startswith("http://") or image_url.startswith("https://"):
+        return image_url
+    if not image_url.startswith("data:image/"):
+        logger.warning("Unsupported image URL format for publishing.")
+        return None
+
+    try:
+        _, encoded = image_url.split(",", 1)
+        image_bytes = base64.b64decode(encoded)
+        return upload_image_bytes_to_cloudinary(image_bytes)
+    except Exception as e:
+        logger.error("Failed to convert inline preview image into a hosted URL: %s", e)
+        return None
 
 
 def _graph_get(path: str, params: Dict) -> Dict:
@@ -110,20 +134,24 @@ def publish_to_instagram(caption: str, hashtags: str, image_url: str) -> Optiona
 
 # ── Combined publisher ────────────────────────────────────────────────────────
 
-def publish_post(post_data: Dict[str, Any]) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+def publish_post(post_data: Dict[str, Any]) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
     """
     Publish to both Facebook and Instagram.
-    Returns (facebook_post_id, instagram_post_id, error_message).
+    Returns (facebook_post_id, instagram_post_id, error_message, resolved_image_url).
     """
     image_url = post_data.get("image_url", "")
     caption   = post_data.get("caption", "")
     hashtags  = post_data.get("hashtags", "")
 
     if not image_url:
-        return None, None, "No image URL available for publishing."
+        return None, None, "No image URL available for publishing.", None
 
-    fb_id = publish_to_facebook(caption, hashtags, image_url)
-    ig_id = publish_to_instagram(caption, hashtags, image_url)
+    publishable_image_url = _ensure_publishable_image_url(image_url)
+    if not publishable_image_url:
+        return None, None, "Image preview exists, but a public hosted URL could not be prepared for publishing.", None
+
+    fb_id = publish_to_facebook(caption, hashtags, publishable_image_url)
+    ig_id = publish_to_instagram(caption, hashtags, publishable_image_url)
 
     error = None
     if not fb_id and not ig_id:
@@ -133,4 +161,4 @@ def publish_post(post_data: Dict[str, Any]) -> Tuple[Optional[str], Optional[str
     elif not ig_id:
         error = "Published to Facebook only. Instagram publish failed."
 
-    return fb_id, ig_id, error
+    return fb_id, ig_id, error, publishable_image_url

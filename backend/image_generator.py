@@ -36,6 +36,24 @@ def _configure_cloudinary():
         secure=True,
     )
 
+
+def upload_image_bytes_to_cloudinary(image_bytes: bytes, *, folder: str = "buniyaad/posts", public_id: Optional[str] = None) -> str:
+    """Upload rendered image bytes to Cloudinary and return the hosted HTTPS URL."""
+    _configure_cloudinary()
+    result = cloudinary.uploader.upload(
+        image_bytes,
+        folder=folder,
+        public_id=public_id,
+        resource_type="image",
+        format="jpg",
+        transformation=[{"quality": "auto:best"}],
+    )
+    url = result.get("secure_url")
+    if not url:
+        raise RuntimeError("Cloudinary upload succeeded but no secure_url was returned.")
+    logger.info("Uploaded to Cloudinary: %s", url)
+    return url
+
 # ── Template mapping ──────────────────────────────────────────────────────────
 TEMPLATE_MAP = {
     "word_of_day":        "word_of_day.html",
@@ -169,6 +187,25 @@ with sync_playwright() as p:
         with open(png_file, "rb") as f:
             return f.read()
 
+
+def _render_post_png(post_data: Dict[str, Any]) -> bytes:
+    tmpl_path    = _pick_template(post_data)
+    tmpl_html    = tmpl_path.read_text(encoding="utf-8")
+    replacements = _build_replacements(post_data)
+
+    html = tmpl_html
+    for key, value in replacements.items():
+        html = html.replace("{{" + key + "}}", value)
+
+    logger.info("Rendering template: %s", tmpl_path.name)
+    png_bytes = _render_html_to_png(html)
+    logger.info("Rendered: %d bytes", len(png_bytes))
+    return png_bytes
+
+
+def _png_bytes_to_data_url(png_bytes: bytes) -> str:
+    return f"data:image/png;base64,{base64.b64encode(png_bytes).decode('ascii')}"
+
 # ── Public API ────────────────────────────────────────────────────────────────
 def generate_and_upload_image(post_data: Dict[str, Any]) -> Optional[str]:
     """
@@ -176,31 +213,12 @@ def generate_and_upload_image(post_data: Dict[str, Any]) -> Optional[str]:
     screenshot it, upload to Cloudinary, return the URL.
     """
     try:
-        _configure_cloudinary()
-
-        tmpl_path    = _pick_template(post_data)
-        tmpl_html    = tmpl_path.read_text(encoding="utf-8")
-        replacements = _build_replacements(post_data)
-
-        # Apply all placeholder replacements
-        html = tmpl_html
-        for key, value in replacements.items():
-            html = html.replace("{{" + key + "}}", value)
-
-        logger.info("Rendering template: %s", tmpl_path.name)
-        png_bytes = _render_html_to_png(html)
-        logger.info("Rendered: %d bytes", len(png_bytes))
-
-        result = cloudinary.uploader.upload(
-            png_bytes,
-            folder="buniyaad/posts",
-            resource_type="image",
-            format="jpg",
-            transformation=[{"quality": "auto:best"}],
-        )
-        url = result.get("secure_url")
-        logger.info("Uploaded to Cloudinary: %s", url)
-        return url
+        png_bytes = _render_post_png(post_data)
+        try:
+            return upload_image_bytes_to_cloudinary(png_bytes)
+        except Exception as upload_error:
+            logger.warning("Cloudinary upload failed, falling back to inline preview image: %s", upload_error)
+            return _png_bytes_to_data_url(png_bytes)
 
     except Exception as e:
         logger.error("Image generation failed: %s", e, exc_info=True)
