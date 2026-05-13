@@ -221,6 +221,63 @@ let currentPost = null;
 let editingCaption = false;
 let editingHashtags = false;
 
+function normalizeImageUrl(url) {
+  if (!url) return '';
+  return String(url).trim();
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function setPostImage(imageUrl) {
+  const imgWrapper = document.querySelector('.post-image-wrapper');
+  if (!imgWrapper) return;
+
+  const normalizedUrl = normalizeImageUrl(imageUrl);
+  if (!normalizedUrl) {
+    imgWrapper.innerHTML = '<div class="no-image">🖼️<br/>Image generating…</div>';
+    return;
+  }
+
+  imgWrapper.innerHTML = '<div class="no-image">🖼️<br/>Loading image…</div>';
+
+  const tryLoad = (attempt = 0) => {
+    const img = new Image();
+    img.id = 'post-image';
+    img.alt = 'Generated post image';
+    img.loading = 'eager';
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.borderRadius = '12px';
+    img.style.objectFit = 'cover';
+
+    img.onload = () => {
+      imgWrapper.innerHTML = '';
+      imgWrapper.appendChild(img);
+    };
+
+    img.onerror = () => {
+      if (attempt < 2) {
+        tryLoad(attempt + 1);
+        return;
+      }
+      imgWrapper.innerHTML = '<div class="no-image">🖼️<br/>Image not available<br/>Tap Refresh to try again.</div>';
+    };
+
+    img.src = attempt === 0
+      ? normalizedUrl
+      : `${normalizedUrl}${normalizedUrl.includes('?') ? '&' : '?'}retry=${Date.now()}-${attempt}`;
+  };
+
+  tryLoad();
+}
+
 // ── Today's post ──────────────────────────────────────────────────────────────
 async function loadPendingPost() {
   setPostState('loading');
@@ -260,17 +317,7 @@ function setPostState(state) {
 }
 
 function renderPost(post) {
-  // Image — rebuild the wrapper so onerror can't break it permanently
-  const imgWrapper = document.querySelector('.post-image-wrapper');
-  if (imgWrapper) {
-    if (post.image_url) {
-      imgWrapper.innerHTML = `<img id="post-image" src="${post.image_url}" alt="Generated post image"
-        style="width:100%;border-radius:12px;"
-        onerror="this.parentElement.innerHTML='<div class=\\'no-image\\'>🖼️<br/>Image not available</div>'" />`;
-    } else {
-      imgWrapper.innerHTML = '<div class="no-image">🖼️<br/>Image generating…</div>';
-    }
-  }
+  setPostImage(post.image_url);
 
   // Badges
   document.getElementById('post-type-badge').textContent = formatPostType(post.post_type);
@@ -624,7 +671,7 @@ function buildHistoryCard(post) {
 
   card.innerHTML = `
     ${post.image_url
-      ? `<img src="${post.image_url}" alt="${formatPostType(post.post_type)}" loading="lazy" />`
+      ? `<img src="${escapeHtml(normalizeImageUrl(post.image_url))}" alt="${escapeHtml(formatPostType(post.post_type))}" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'), { textContent: '🖼️', style: 'width:100%;aspect-ratio:1;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:48px;' }))" />`
       : `<div style="width:100%;aspect-ratio:1;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:48px;">🖼️</div>`
     }
     <div class="history-card-body">
