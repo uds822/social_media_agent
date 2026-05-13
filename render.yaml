@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: social-media-agent-backend
+    env: python
+    rootDir: backend
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /api/health
+    buildCommand: |
+      pip install -r requirements.txt
+      python -m playwright install --with-deps chromium
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
