@@ -25,6 +25,9 @@ from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, status
 from fastapi.middleware.cors import CORSMiddleware
 from concurrent.futures import ThreadPoolExecutor
 from pydantic import BaseModel
+import hashlib
+import secrets
+import dotenv
 
 import auth
 import database as db
@@ -82,6 +85,17 @@ class LoginResponse(BaseModel):
     expires_in: int  # seconds
 
 
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
+class ResetPasswordRequest(BaseModel):
+    username: str
+    backup_code: str
+    new_password: str
+
+
 class GenerateRequest(BaseModel):
     post_type:   Optional[str] = None   # null → use weekly schedule
     subject:     Optional[str] = None
@@ -120,6 +134,58 @@ def login(req: LoginRequest):
         token=token,
         expires_in=settings.jwt_expire_minutes * 60,
     )
+
+
+def hash_code(code: str) -> str:
+    return hashlib.sha256(code.encode()).hexdigest()
+
+@app.post("/auth/change-password", tags=["Auth"])
+def change_password(req: ChangePasswordRequest, _: str = Depends(auth.get_current_admin)):
+    if req.old_password != settings.admin_password:
+        raise HTTPException(status_code=400, detail="Incorrect old password")
+    
+    settings.admin_password = req.new_password
+    dotenv.set_key(".env", "ADMIN_PASSWORD", req.new_password)
+    return {"message": "Password updated successfully."}
+
+@app.post("/auth/generate-backup-codes", tags=["Auth"])
+def generate_backup_codes(_: str = Depends(auth.get_current_admin)):
+    # Generate 5 random 8-character codes
+    codes = [secrets.token_hex(4) for _ in range(5)]
+    hashed_codes = [hash_code(c) for c in codes]
+    
+    # Save hashes to .env
+    hashed_str = ",".join(hashed_codes)
+    settings.backup_codes = hashed_str
+    dotenv.set_key(".env", "BACKUP_CODES", hashed_str)
+    
+    return {"codes": codes, "message": "Save these codes securely. They will only be shown once."}
+
+@app.post("/auth/reset-password", tags=["Auth"])
+def reset_password(req: ResetPasswordRequest):
+    if req.username != settings.admin_username:
+        raise HTTPException(status_code=400, detail="Invalid username")
+    
+    if not settings.backup_codes:
+        raise HTTPException(status_code=400, detail="No backup codes configured for this account")
+    
+    hashed_input = hash_code(req.backup_code)
+    saved_hashes = settings.backup_codes.split(",")
+    
+    if hashed_input not in saved_hashes:
+        raise HTTPException(status_code=400, detail="Invalid backup code")
+    
+    # Remove the used backup code
+    saved_hashes.remove(hashed_input)
+    new_hashed_str = ",".join(saved_hashes)
+    settings.backup_codes = new_hashed_str
+    dotenv.set_key(".env", "BACKUP_CODES", new_hashed_str)
+    
+    # Update password
+    settings.admin_password = req.new_password
+    dotenv.set_key(".env", "ADMIN_PASSWORD", req.new_password)
+    
+    return {"message": "Password reset successfully. You can now log in."}
 
 
 # ── Health ────────────────────────────────────────────────────────────────────

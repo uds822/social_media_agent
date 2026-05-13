@@ -46,8 +46,44 @@
           <span id="login-spinner" class="spinner hidden"></span>
         </button>
         <p id="login-error" class="error-msg hidden"></p>
+        <div style="text-align:center; margin-top:16px;">
+          <a href="#" onclick="showResetScreen(event)" style="color:#818cf8; font-size:13px; text-decoration:none; font-weight:600;">Forgot Password? Use Backup Code</a>
+        </div>
       </form>
       <p class="login-hint">City, State | thebuniyaad.com</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ RESET PASSWORD SCREEN ══ -->
+<div id="screen-reset" class="screen hidden">
+  <div class="login-bg">
+    <div class="login-card glass-card">
+      <div class="login-logo">
+        <h2 class="brand-name" style="font-size:24px;">Reset Password</h2>
+        <p class="brand-sub">Use a 1-time backup code to reset</p>
+      </div>
+      <form id="reset-form" onsubmit="handleResetPassword(event)">
+        <div class="input-group">
+          <label>Username</label>
+          <input id="reset-username" type="text" placeholder="admin" required />
+        </div>
+        <div class="input-group">
+          <label>Backup Code</label>
+          <input id="reset-code" type="text" placeholder="e.g. 1a2b3c4d" required />
+        </div>
+        <div class="input-group">
+          <label>New Password</label>
+          <input id="reset-password" type="password" placeholder="••••••••" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="reset-btn">
+          <span id="reset-btn-text">Reset Password</span>
+        </button>
+        <p id="reset-error" class="error-msg hidden"></p>
+        <div style="text-align:center; margin-top:16px;">
+          <a href="#" onclick="showLoginScreen(event)" style="color:#8B92B0; font-size:13px; text-decoration:none;">← Back to Login</a>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -246,6 +282,28 @@
           <div class="input-row">
             <input id="server-url-input" type="text" class="input-sm" placeholder="http://localhost:8000" />
             <button class="btn btn-primary btn-sm" onclick="saveServerUrl()">Save</button>
+          </div>
+        </div>
+      </div>
+      <div class="glass-card settings-card">
+        <h3>🔒 Security &amp; Access</h3>
+        <p style="font-size: 13px; margin-bottom: 15px; color: rgba(255,255,255,0.7); line-height: 1.5;">
+          Change your admin password or generate one-time backup codes in case you forget it.
+        </p>
+        <div class="mt-2">
+          <label class="input-label">Current Password</label>
+          <input id="cp-old" type="password" class="input-sm" placeholder="••••••••" style="margin-bottom:8px; width:100%;" />
+          <label class="input-label">New Password</label>
+          <input id="cp-new" type="password" class="input-sm" placeholder="••••••••" style="margin-bottom:12px; width:100%;" />
+          <button class="btn btn-primary btn-sm" id="btn-change-password" onclick="changePassword()">Change Password</button>
+          <div id="cp-msg" style="display:none; margin-top:8px; font-size:13px;"></div>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,0.1); margin-top:20px; padding-top:20px;">
+          <label class="input-label">Recovery Backup Codes</label>
+          <button class="btn btn-outline btn-sm" style="margin-bottom:12px;" onclick="generateBackupCodes()">Generate 5 New Backup Codes</button>
+          <div id="backup-codes-display" style="display:none; background:rgba(0,0,0,0.3); padding:15px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
+            <p style="color:#fbbf24; font-size:12px; margin-bottom:10px; font-weight:bold;">⚠️ Save these codes safely. They will not be shown again.</p>
+            <div id="backup-codes-list" style="font-family:monospace; font-size:16px; letter-spacing:2px; color:#fff; line-height:1.8;"></div>
           </div>
         </div>
       </div>

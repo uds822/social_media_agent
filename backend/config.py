@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     # Admin
     admin_username: str = "admin"
     admin_password: str = "buniyaad2024"
+    backup_codes: str = ""
     jwt_secret: str = "CHANGE_ME"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7  # 7 days

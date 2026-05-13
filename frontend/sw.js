@@ -26,6 +26,9 @@ self.addEventListener('activate', (event) => {
 
 // Network-first for app files (always get fresh code), cache-first for fonts
 self.addEventListener('fetch', (event) => {
+  // Only handle GET requests
+  if (event.request.method !== 'GET') return;
+
   const url = new URL(event.request.url);
 
   // For Google Fonts: cache-first (they don't change)
@@ -36,13 +39,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Bypass cross-origin requests entirely (API calls, Cloudinary images)
+  // This is critical for WebViews and APK wrappers where caching opaque responses can fail
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   // For everything else (app JS, CSS, HTML): network-first
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Update cache with fresh response
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        // Only cache valid OK responses
+        if (response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
         return response;
       })
       .catch(() => caches.match(event.request)) // fallback to cache if offline

@@ -82,10 +82,56 @@ function togglePassword() {
   }
 }
 
+function showLoginScreen(e) {
+  if (e) e.preventDefault();
+  document.getElementById('screen-reset').classList.add('hidden');
+  document.getElementById('screen-reset').classList.remove('active');
+  document.getElementById('screen-login').classList.add('active');
+  document.getElementById('screen-login').classList.remove('hidden');
+}
+
+function showResetScreen(e) {
+  if (e) e.preventDefault();
+  document.getElementById('screen-login').classList.add('hidden');
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-reset').classList.add('active');
+  document.getElementById('screen-reset').classList.remove('hidden');
+}
+
+async function handleResetPassword(e) {
+  e.preventDefault();
+  const btn = document.getElementById('reset-btn');
+  const btnText = document.getElementById('reset-btn-text');
+  const errMsg = document.getElementById('reset-error');
+  
+  btnText.textContent = 'Resetting...';
+  btn.disabled = true;
+  errMsg.classList.add('hidden');
+  
+  try {
+    const data = await api('/auth/reset-password', 'POST', {
+      username: document.getElementById('reset-username').value,
+      backup_code: document.getElementById('reset-code').value,
+      new_password: document.getElementById('reset-password').value,
+    });
+    alert(data.message);
+    document.getElementById('reset-form').reset();
+    showLoginScreen();
+  } catch (err) {
+    errMsg.textContent = err.message || 'Failed to reset password.';
+    errMsg.classList.remove('hidden');
+  } finally {
+    btnText.textContent = 'Reset Password';
+    btn.disabled = false;
+  }
+}
+
 function logout() {
   clearToken();
   document.getElementById('screen-app').classList.add('hidden');
   document.getElementById('screen-app').classList.remove('active');
+  document.getElementById('screen-reset').classList.add('hidden');
+  document.getElementById('screen-reset').classList.remove('active');
   document.getElementById('screen-login').classList.add('active');
   document.getElementById('screen-login').classList.remove('hidden');
   currentPost = null;
@@ -305,6 +351,10 @@ async function generatePost(postType, subject, classLevel) {
 async function downloadPost() {
   if (!currentPost || !currentPost.image_url) return;
 
+  const btn = document.querySelector('button[onclick="downloadPost()"]');
+  const originalText = btn ? btn.innerHTML : '';
+  if (btn) btn.innerHTML = '⏳ Processing...';
+
   // 1. Copy caption and hashtags to clipboard
   const caption = document.getElementById('caption-display').textContent || '';
   const hashtags = document.getElementById('hashtags-display').textContent || '';
@@ -312,38 +362,68 @@ async function downloadPost() {
 
   try {
     await navigator.clipboard.writeText(fullText);
-    showStatusMsg('📋 Caption copied! Downloading image...', 'info');
+    showStatusMsg('📋 Caption copied! Preparing image...', 'info');
   } catch (err) {
     console.error('Clipboard copy failed:', err);
   }
 
   // 2. Download the image
   try {
-    // Fetch blob to force a download instead of navigating
-    const response = await fetch(currentPost.image_url);
+    // Fetch blob
+    const response = await fetch(currentPost.image_url, { mode: 'cors' });
     if (!response.ok) throw new Error('Network response was not ok');
     const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
+    const filename = `buniyaad-${currentPost.post_type}-${Date.now()}.jpg`;
 
+    // Try Native Share API first (Works perfectly in Android App WebViews)
+    if (navigator.canShare && navigator.share) {
+      const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            title: 'Buniyaad Post',
+            text: fullText,
+            files: [file]
+          });
+          showStatusMsg('✅ Image & Caption shared successfully!', 'success');
+          if (btn) btn.innerHTML = originalText;
+          return;
+        } catch (shareErr) {
+          console.error('Share rejected/failed:', shareErr);
+          // If user just cancelled the share sheet, abort without error
+          if (shareErr.name === 'AbortError') {
+             if (btn) btn.innerHTML = originalText;
+             return;
+          }
+        }
+      }
+    }
+
+    // Fallback: standard web download
+    const blobUrl = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = blobUrl;
-    // e.g., buniyaad-word_of_day-168000000.png
-    a.download = `buniyaad-${currentPost.post_type}-${Date.now()}.png`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
 
-    window.URL.revokeObjectURL(blobUrl);
-    document.body.removeChild(a);
+    setTimeout(() => {
+      window.URL.revokeObjectURL(blobUrl);
+      document.body.removeChild(a);
+    }, 100);
 
     setTimeout(() => {
       showStatusMsg('✅ Image downloaded & Caption copied! Ready to post manually.', 'success');
     }, 1500);
+
   } catch (err) {
     console.error('Download failed:', err);
     // Fallback: just open image in new tab if CORS blocks the download
     window.open(currentPost.image_url, '_blank');
-    showStatusMsg('✅ Caption copied! Long-press or right-click the opened image to save it.', 'success');
+    showStatusMsg('✅ Caption copied! Long-press the opened image to save it.', 'success');
+  } finally {
+    if (btn) btn.innerHTML = originalText;
   }
 }
 
@@ -604,6 +684,59 @@ function saveServerUrl() {
     localStorage.setItem('buniyaad_api_url', url);
     document.getElementById('server-url-display').textContent = url;
     showStatusMsg('✅ Backend URL saved!', 'success');
+  }
+}
+
+async function changePassword() {
+  const oldPass = document.getElementById('cp-old').value;
+  const newPass = document.getElementById('cp-new').value;
+  const msgEl = document.getElementById('cp-msg');
+  const btn = document.getElementById('btn-change-password');
+  
+  if (!oldPass || !newPass) {
+    msgEl.textContent = '❌ Please fill both fields';
+    msgEl.style.color = '#fca5a5';
+    msgEl.style.display = 'block';
+    return;
+  }
+  
+  btn.disabled = true;
+  btn.textContent = 'Changing...';
+  
+  try {
+    const data = await api('/auth/change-password', 'POST', {
+      old_password: oldPass,
+      new_password: newPass
+    });
+    msgEl.textContent = `✅ ${data.message}`;
+    msgEl.style.color = '#34d399';
+    msgEl.style.display = 'block';
+    document.getElementById('cp-old').value = '';
+    document.getElementById('cp-new').value = '';
+    setTimeout(() => { msgEl.style.display = 'none'; }, 4000);
+  } catch (err) {
+    msgEl.textContent = `❌ ${err.message}`;
+    msgEl.style.color = '#fca5a5';
+    msgEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Change Password';
+  }
+}
+
+async function generateBackupCodes() {
+  if (!confirm("Generate new backup codes? Any old codes will stop working immediately.")) return;
+  
+  try {
+    const data = await api('/auth/generate-backup-codes', 'POST');
+    const listEl = document.getElementById('backup-codes-list');
+    const displayEl = document.getElementById('backup-codes-display');
+    
+    listEl.innerHTML = data.codes.map((c, i) => `<div>${i+1}. <b>${c}</b></div>`).join('');
+    displayEl.style.display = 'block';
+    alert(data.message);
+  } catch (err) {
+    alert(`Failed to generate codes: ${err.message}`);
   }
 }
 
