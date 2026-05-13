@@ -96,6 +96,11 @@ class ResetPasswordRequest(BaseModel):
     new_password: str
 
 
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+
+
 class GenerateRequest(BaseModel):
     post_type:   Optional[str] = None   # null → use weekly schedule
     subject:     Optional[str] = None
@@ -125,10 +130,36 @@ class UpdateKeysRequest(BaseModel):
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
+@app.post("/auth/register", tags=["Auth"])
+def register(req: RegisterRequest):
+    try:
+        user = db.get_user(req.username)
+        if user or req.username == settings.admin_username:
+            raise HTTPException(status_code=400, detail="Username already exists")
+    except Exception as e:
+        # If the table doesn't exist yet, we catch the exception and instruct the user
+        if "relation \"users\" does not exist" in str(e):
+            raise HTTPException(status_code=500, detail="The 'users' table does not exist in Supabase yet. Please run the MIGRATION_SQL.")
+        raise
+        
+    db.create_user(req.username, hash_code(req.password))
+    return {"message": "Account created successfully. You can now log in."}
+
+
 @app.post("/auth/login", response_model=LoginResponse, tags=["Auth"])
 def login(req: LoginRequest):
-    if req.username != settings.admin_username or req.password != settings.admin_password:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    try:
+        user = db.get_user(req.username)
+    except Exception:
+        user = None
+
+    if user:
+        if user["password_hash"] != hash_code(req.password):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    else:
+        if req.username != settings.admin_username or req.password != settings.admin_password:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+            
     token = auth.create_token(req.username)
     return LoginResponse(
         token=token,
@@ -140,50 +171,82 @@ def hash_code(code: str) -> str:
     return hashlib.sha256(code.encode()).hexdigest()
 
 @app.post("/auth/change-password", tags=["Auth"])
-def change_password(req: ChangePasswordRequest, _: str = Depends(auth.get_current_admin)):
-    if req.old_password != settings.admin_password:
-        raise HTTPException(status_code=400, detail="Incorrect old password")
-    
-    settings.admin_password = req.new_password
-    dotenv.set_key(".env", "ADMIN_PASSWORD", req.new_password)
+def change_password(req: ChangePasswordRequest, username: str = Depends(auth.get_current_admin)):
+    try:
+        user = db.get_user(username)
+    except Exception:
+        user = None
+
+    if user:
+        if user["password_hash"] != hash_code(req.old_password):
+            raise HTTPException(status_code=400, detail="Incorrect old password")
+        db.update_user(username, {"password_hash": hash_code(req.new_password)})
+    else:
+        if req.old_password != settings.admin_password:
+            raise HTTPException(status_code=400, detail="Incorrect old password")
+        settings.admin_password = req.new_password
+        dotenv.set_key(".env", "ADMIN_PASSWORD", req.new_password)
+        
     return {"message": "Password updated successfully."}
 
 @app.post("/auth/generate-backup-codes", tags=["Auth"])
-def generate_backup_codes(_: str = Depends(auth.get_current_admin)):
-    # Generate 5 random 8-character codes
+def generate_backup_codes(username: str = Depends(auth.get_current_admin)):
     codes = [secrets.token_hex(4) for _ in range(5)]
     hashed_codes = [hash_code(c) for c in codes]
-    
-    # Save hashes to .env
     hashed_str = ",".join(hashed_codes)
-    settings.backup_codes = hashed_str
-    dotenv.set_key(".env", "BACKUP_CODES", hashed_str)
+    
+    try:
+        user = db.get_user(username)
+    except Exception:
+        user = None
+
+    if user:
+        db.update_user(username, {"backup_codes": hashed_str})
+    else:
+        settings.backup_codes = hashed_str
+        dotenv.set_key(".env", "BACKUP_CODES", hashed_str)
     
     return {"codes": codes, "message": "Save these codes securely. They will only be shown once."}
 
 @app.post("/auth/reset-password", tags=["Auth"])
 def reset_password(req: ResetPasswordRequest):
-    if req.username != settings.admin_username:
-        raise HTTPException(status_code=400, detail="Invalid username")
-    
-    if not settings.backup_codes:
-        raise HTTPException(status_code=400, detail="No backup codes configured for this account")
-    
-    hashed_input = hash_code(req.backup_code)
-    saved_hashes = settings.backup_codes.split(",")
-    
-    if hashed_input not in saved_hashes:
-        raise HTTPException(status_code=400, detail="Invalid backup code")
-    
-    # Remove the used backup code
-    saved_hashes.remove(hashed_input)
-    new_hashed_str = ",".join(saved_hashes)
-    settings.backup_codes = new_hashed_str
-    dotenv.set_key(".env", "BACKUP_CODES", new_hashed_str)
-    
-    # Update password
-    settings.admin_password = req.new_password
-    dotenv.set_key(".env", "ADMIN_PASSWORD", req.new_password)
+    try:
+        user = db.get_user(req.username)
+    except Exception:
+        user = None
+
+    if user:
+        if not user.get("backup_codes"):
+            raise HTTPException(status_code=400, detail="No backup codes configured for this account")
+            
+        hashed_input = hash_code(req.backup_code)
+        saved_hashes = user["backup_codes"].split(",")
+        if hashed_input not in saved_hashes:
+            raise HTTPException(status_code=400, detail="Invalid backup code")
+            
+        saved_hashes.remove(hashed_input)
+        new_hashed_str = ",".join(saved_hashes)
+        db.update_user(req.username, {
+            "password_hash": hash_code(req.new_password),
+            "backup_codes": new_hashed_str
+        })
+    else:
+        if req.username != settings.admin_username:
+            raise HTTPException(status_code=400, detail="Invalid username")
+        if not settings.backup_codes:
+            raise HTTPException(status_code=400, detail="No backup codes configured for this account")
+            
+        hashed_input = hash_code(req.backup_code)
+        saved_hashes = settings.backup_codes.split(",")
+        if hashed_input not in saved_hashes:
+            raise HTTPException(status_code=400, detail="Invalid backup code")
+            
+        saved_hashes.remove(hashed_input)
+        new_hashed_str = ",".join(saved_hashes)
+        settings.backup_codes = new_hashed_str
+        dotenv.set_key(".env", "BACKUP_CODES", new_hashed_str)
+        settings.admin_password = req.new_password
+        dotenv.set_key(".env", "ADMIN_PASSWORD", req.new_password)
     
     return {"message": "Password reset successfully. You can now log in."}
 

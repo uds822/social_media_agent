@@ -86,6 +86,8 @@ function showLoginScreen(e) {
   if (e) e.preventDefault();
   document.getElementById('screen-reset').classList.add('hidden');
   document.getElementById('screen-reset').classList.remove('active');
+  document.getElementById('screen-register').classList.add('hidden');
+  document.getElementById('screen-register').classList.remove('active');
   document.getElementById('screen-login').classList.add('active');
   document.getElementById('screen-login').classList.remove('hidden');
 }
@@ -94,8 +96,47 @@ function showResetScreen(e) {
   if (e) e.preventDefault();
   document.getElementById('screen-login').classList.add('hidden');
   document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-register').classList.add('hidden');
+  document.getElementById('screen-register').classList.remove('active');
   document.getElementById('screen-reset').classList.add('active');
   document.getElementById('screen-reset').classList.remove('hidden');
+}
+
+function showRegisterScreen(e) {
+  if (e) e.preventDefault();
+  document.getElementById('screen-login').classList.add('hidden');
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-reset').classList.add('hidden');
+  document.getElementById('screen-reset').classList.remove('active');
+  document.getElementById('screen-register').classList.add('active');
+  document.getElementById('screen-register').classList.remove('hidden');
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  const btn = document.getElementById('register-btn');
+  const btnText = document.getElementById('register-btn-text');
+  const errMsg = document.getElementById('register-error');
+  
+  btnText.textContent = 'Creating...';
+  btn.disabled = true;
+  errMsg.classList.add('hidden');
+  
+  try {
+    const data = await api('/auth/register', 'POST', {
+      username: document.getElementById('register-username').value,
+      password: document.getElementById('register-password').value,
+    });
+    alert(data.message);
+    document.getElementById('register-form').reset();
+    showLoginScreen();
+  } catch (err) {
+    errMsg.textContent = err.message || 'Failed to create account.';
+    errMsg.classList.remove('hidden');
+  } finally {
+    btnText.textContent = 'Create Account';
+    btn.disabled = false;
+  }
 }
 
 async function handleResetPassword(e) {

@@ -179,10 +179,35 @@ def clear_all_posts() -> int:
     return count
 
 
+def get_user(username: str) -> Optional[Dict[str, Any]]:
+    client = get_client()
+    result = client.table("users").select("*").eq("username", username).execute()
+    return result.data[0] if result.data else None
+
+
+def create_user(username: str, password_hash: str) -> Dict[str, Any]:
+    client = get_client()
+    result = client.table("users").insert({"username": username, "password_hash": password_hash}).execute()
+    return result.data[0]
+
+
+def update_user(username: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+    client = get_client()
+    result = client.table("users").update(updates).eq("username", username).execute()
+    return result.data[0]
+
+
 # ── SQL migration helper (run once) ──────────────────────────────────────────
 
 MIGRATION_SQL = """
 create extension if not exists "pgcrypto";
+
+create table if not exists users (
+  username       text primary key,
+  password_hash  text not null,
+  backup_codes   text,
+  created_at     timestamptz not null default now()
+);
 
 create table if not exists posts (
   id                 uuid         primary key default gen_random_uuid(),

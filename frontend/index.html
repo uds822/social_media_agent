@@ -46,8 +46,9 @@
           <span id="login-spinner" class="spinner hidden"></span>
         </button>
         <p id="login-error" class="error-msg hidden"></p>
-        <div style="text-align:center; margin-top:16px;">
-          <a href="#" onclick="showResetScreen(event)" style="color:#818cf8; font-size:13px; text-decoration:none; font-weight:600;">Forgot Password? Use Backup Code</a>
+        <div style="text-align:center; margin-top:16px; display:flex; justify-content:space-between;">
+          <a href="#" onclick="showResetScreen(event)" style="color:#8B92B0; font-size:13px; text-decoration:none;">Forgot Password?</a>
+          <a href="#" onclick="showRegisterScreen(event)" style="color:#818cf8; font-size:13px; text-decoration:none; font-weight:600;">Create Account</a>
         </div>
       </form>
       <p class="login-hint">City, State | thebuniyaad.com</p>
@@ -80,6 +81,35 @@
           <span id="reset-btn-text">Reset Password</span>
         </button>
         <p id="reset-error" class="error-msg hidden"></p>
+        <div style="text-align:center; margin-top:16px;">
+          <a href="#" onclick="showLoginScreen(event)" style="color:#8B92B0; font-size:13px; text-decoration:none;">← Back to Login</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ REGISTER SCREEN ══ -->
+<div id="screen-register" class="screen hidden">
+  <div class="login-bg">
+    <div class="login-card glass-card">
+      <div class="login-logo">
+        <h2 class="brand-name" style="font-size:24px;">Create Account</h2>
+        <p class="brand-sub">Register a new admin user</p>
+      </div>
+      <form id="register-form" onsubmit="handleRegister(event)">
+        <div class="input-group">
+          <label>Username</label>
+          <input id="register-username" type="text" placeholder="new_admin" required />
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input id="register-password" type="password" placeholder="••••••••" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="register-btn">
+          <span id="register-btn-text">Create Account</span>
+        </button>
+        <p id="register-error" class="error-msg hidden"></p>
         <div style="text-align:center; margin-top:16px;">
           <a href="#" onclick="showLoginScreen(event)" style="color:#8B92B0; font-size:13px; text-decoration:none;">← Back to Login</a>
         </div>
