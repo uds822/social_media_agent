@@ -102,9 +102,11 @@ def _get_providers():
 def _call_llm(system: str, user: str, max_tokens: int = 1024) -> str:
     """Generic LLM call with multi-provider fallback and error handling."""
     last_error = None
+
     for client, model, name in _get_providers():
         try:
             logger.info("Attempting generation with %s (%s)...", name, model)
+
             response = client.chat.completions.create(
                 model=model,
                 messages=[
@@ -114,29 +116,44 @@ def _call_llm(system: str, user: str, max_tokens: int = 1024) -> str:
                 temperature=0.7,
                 max_tokens=max_tokens,
             )
-            raw = response.choices[0].message.content.strip()
-            
+
+            message = response.choices[0].message
+            content = getattr(message, "content", None)
+
+            if not content or not content.strip():
+                logger.warning(
+                    "❌ %s returned empty content. finish_reason=%s, reasoning=%s",
+                    name,
+                    getattr(response.choices[0], "finish_reason", None),
+                    getattr(message, "reasoning", None),
+                )
+                raise ValueError(f"{name} returned empty content")
+
+            raw = content.strip()
+
             # Clean markdown fences and conversational filler
             if "```json" in raw:
-                raw = raw.split("```json")[1].split("```")[0]
+                raw = raw.split("```json", 1)[1].split("```", 1)[0]
             elif "```" in raw:
-                raw = raw.split("```")[1]
-            
+                raw = raw.split("```", 1)[1].split("```", 1)[0]
+
             raw = raw.strip()
+
             if "{" in raw:
                 raw = raw[raw.find("{"):]
+
             if "}" in raw:
-                raw = raw[:raw.rfind("}")+1]
-                
+                raw = raw[:raw.rfind("}") + 1]
+
             return raw
+
         except Exception as e:
             logger.warning("❌ %s failed: %s", name, e)
             last_error = e
             continue
-            
+
     logger.error("All LLM providers failed. Last error: %s", last_error)
     raise RuntimeError(f"All LLM providers failed: {last_error}")
-
 
 # ── Post-type generators ──────────────────────────────────────────────────────
 
