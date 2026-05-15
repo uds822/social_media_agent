@@ -107,15 +107,24 @@ def _call_llm(system: str, user: str, max_tokens: int = 1024) -> str:
         try:
             logger.info("Attempting generation with %s (%s)...", name, model)
 
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system},
-                    {"role": "user",   "content": user},
-                ],
-                temperature=0.7,
-                max_tokens=max_tokens,
-            )
+            request_kwargs = {
+    "model": model,
+    "messages": [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ],
+    "temperature": 0.7,
+    "max_tokens": max_tokens,
+}
+
+if name == "OpenRouter":
+    request_kwargs["extra_body"] = {
+        "provider": {
+            "sort": "latency"
+        }
+    }
+
+response = client.chat.completions.create(**request_kwargs)
 
             message = response.choices[0].message
             content = getattr(message, "content", None)
