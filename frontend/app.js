@@ -6,6 +6,7 @@
 // ── Configuration ────────────────────────────────────────────────────────────
 // Auto-detect backend from same host as frontend (works on phone, laptop, any device)
 const DEFAULT_API = "https://social-media-agent-47b8.onrender.com";
+// const DEFAULT_API = "http://localhost:8000";
 function getApiBase() {
   return localStorage.getItem('buniyaad_api_url') || DEFAULT_API;
 }
@@ -959,4 +960,3 @@ async function clearDatabase() {
     alert("Error clearing database: " + err.message);
   }
 }
-

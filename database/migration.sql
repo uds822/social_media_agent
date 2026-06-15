@@ -40,8 +40,40 @@ create index if not exists idx_posts_expires_at
   on posts(expires_at)
   where expires_at is not null;
 
--- ── Row-Level Security (optional but recommended) ─────────────
--- alter table posts enable row level security;
+-- ── Users table ──────────────────────────────────────────────
+create table if not exists users (
+  username       text primary key,
+  password_hash  text not null,
+  backup_codes   text,
+  created_at     timestamptz not null default now()
+);
+
+-- ── Row-Level Security ────────────────────────────────────────
+-- IMPORTANT: Supabase enables RLS by default on new projects.
+-- Run the lines below to grant the anon key full access
+-- so the backend can read/write posts and users.
+
+alter table posts enable row level security;
+alter table users enable row level security;
+
+-- Allow anon key (used by the backend) to do everything on posts
+drop policy if exists "Allow all for anon" on posts;
+create policy "Allow all for anon"
+  on posts
+  for all
+  to anon
+  using (true)
+  with check (true);
+
+-- Allow anon key to do everything on users
+drop policy if exists "Allow all for anon" on users;
+create policy "Allow all for anon"
+  on users
+  for all
+  to anon
+  using (true)
+  with check (true);
 
 -- ── Verify ────────────────────────────────────────────────────
-select 'posts table created successfully' as result;
+select 'Migration complete: tables and RLS policies created successfully' as result;
+

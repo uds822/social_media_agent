@@ -2,6 +2,7 @@
 config.py — Centralised settings via pydantic-settings.
 All values are loaded from the .env file.
 """
+
 from pydantic_settings import BaseSettings
 from pydantic import Field
 
@@ -54,12 +55,12 @@ class Settings(BaseSettings):
     instagram_business_account_id: str = ""
 
     # Scheduler (auto-generates post at this time)
-    daily_post_hour: int = 4
-    daily_post_minute: int = 0
-    
+    daily_post_hour: int = 22
+    daily_post_minute: int = 40
+
     # Send morning Telegram notification at this time
-    notification_hour: int = 7
-    notification_minute: int = 0
+    notification_hour: int = 22
+    notification_minute: int = 42
 
     # Telegram Notification
     telegram_bot_token: str = ""
